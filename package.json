@@ -1,9 +1,14 @@
 {
 	"name": "tilemapper",
 	"version": "1.3.0",
-	"description": "Generate a tilemap from multiple images",
+	"description": "Generate a tilemap from folders containing frames of animation or just multiple images",
+
+	"main": "bin/index.js",
+	"bin": { "tilemapper": "bin/index.js" },
+
 	"scripts": {
-		"test": "tsc && node --enable-source-maps dist"
+		"build": "tsc",
+		"prepublish": "tsc"
 	},
 	"dependencies": {
 		"sharp": "^0.25.2",
@@ -15,5 +20,24 @@
 		"@types/sharp": "^0.25.0",
 		"@types/yargs": "^15.0.5",
 		"typescript": "^3.9.2"
+	},
+
+	"author": "Jack MacDougall <luawhat@gmail.com> (https://lua.wtf/)",
+	"license": "MIT",
+
+	"keywords": [
+		"tilemap",
+		"game",
+		"gamedev",
+		"animation"
+	],
+
+	"homepage": "https://github.com/luawtf/tilemapper#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/luawtf/tilemapper.git"
+	},
+	"bugs": {
+		"url": "https://github.com/luawtf/tilemapper/issues"
 	}
 }

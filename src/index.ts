@@ -11,7 +11,7 @@ import yargs from "yargs";
 
 /** Set up yargs and its configuration */
 const yargsConfig = yargs
-	.command("[<options>] <directory>", "Generate a tilemap from multiple images")
+	.command("[<options>] <directory>", "Generate a tilemap from folders containing frames of animation or just multiple images")
 	.version(((): string => {
 		try {
 			return require("../package.json").version;

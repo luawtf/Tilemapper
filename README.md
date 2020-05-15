@@ -1,5 +1,5 @@
 # Tilemapper
-Generate a tilemap from multiple images.
+Generate a tilemap from folders containing frames of animation or just multiple images.
 
 ## Authors
 Made with ❤ by Jack MacDougall ([lua.wtf](https://lua.wtf/))
