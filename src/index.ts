@@ -16,7 +16,7 @@ const yargsConfig = yargs
 		try {
 			return require("./package.json").version;
 		} catch (err) {
-			// TODO: Warn
+			console.warn("Failed to read version information from package.json");
 			return "Unknown";
 		}
 	})())
@@ -54,11 +54,12 @@ if (argv._.length < 1) {
 	yargs.showHelp();
 	process.exit(1);
 } else if (argv._.length > 1) {
-	throw new Error(`Expected 1 input <directory> argument, got ${argv._.length} input argument(s)`);
+	console.error(`Expected 1 input <directory> argument, got ${argv._.length} input argument(s)`);
+	process.exit(1);
 }
 
 /** Current configuration */
-const settings = ((): {
+export const settings = ((): {
 	input: string,
 	output: string,
 	jpeg: boolean,
@@ -77,13 +78,22 @@ const settings = ((): {
 	}
 })();
 
+// Say hi!
+console.log(`Converting sequences from "${settings.input}" to output tilemap "${settings.output}"`);
+
 // Run everything asynchronously
 (async () => {
+	console.log("Reading sequences...");
+
 	// Read sequences
 	const sequences = await readSequences(settings.input);
 
+	console.log("Compositing sequences into a tilemap...");
+
 	// Composite them into a map
 	const sharpMap = await compositeSequences(sequences, settings.width, settings.height);
+
+	console.log("Writing output file...");
 
 	// Convert the map to a buffer
 	let buf: Buffer;
@@ -92,4 +102,10 @@ const settings = ((): {
 
 	// Write it to the disk
 	await fs.writeFile(settings.output, buf);
-})();
+
+	console.log("Done!");
+})()
+	.catch((err) => {
+		console.error(err instanceof Error ? err.message : String(err));
+		process.exit(1);
+	});

@@ -5,6 +5,8 @@ import sharp, { Sharp, OverlayOptions } from "sharp";
 
 import { Sequence, SequenceList, maximumSequenceImageCount, sequenceListLength } from "./sequence";
 
+import { settings } from "./index";
+
 /** Compile a list of sequences into a tile map */
 export async function compositeSequences(sequences: SequenceList, tileWidth: number, tileHeight: number): Promise<Sharp> {
 	const overlays: OverlayOptions[] = [];
@@ -12,12 +14,14 @@ export async function compositeSequences(sequences: SequenceList, tileWidth: num
 	const tileCountX = maximumSequenceImageCount(sequences);
 	const tileCountY = sequenceListLength(sequences);
 
+	if (settings.verbose) console.log(`Calculating overlays for a tilemap of ${tileCountX}x${tileCountY} size`);
+
 	for (let y = 0; y < tileCountY; y++) {
 		const sequence: Sequence = sequences[y];
 
 		const posY = y * tileHeight;
 
-		for (let x = 0; x < tileCountX; x++) {
+		let x: number; for (x = 0; x < tileCountX; x++) {
 			const tileBuf: Buffer | null = sequence.images[x] ?? null;
 			if (tileBuf === null) break;
 
@@ -41,7 +45,11 @@ export async function compositeSequences(sequences: SequenceList, tileWidth: num
 				gravity: 8
 			});
 		}
+
+		if (settings.verbose) console.log(`Added ${x + 1} overlays for row ${y + 1}`);
 	}
+
+	if (settings.verbose) console.log(`Compositing overlays...`);
 
 	const map =
 	sharp({

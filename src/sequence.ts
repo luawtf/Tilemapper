@@ -4,6 +4,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+import { settings } from "./index";
+
 /** Collection of tiles that make up an animation */
 export interface Sequence {
 	name: string;
@@ -34,7 +36,8 @@ export async function readSequences(dir: string, extensions: string[] = ["png", 
 }
 
 async function findSequencesRecursive(root: string, dir: string, extensions: string[], sequences: SequenceList): Promise<void> {
-	const files: string[] = await fs.readdir(dir, { encoding: "utf-8" }); // @throws
+	let files: string[] = await fs.readdir(dir, { encoding: "utf-8" }); // @throws
+	files = files.sort();
 
 	const sequence: Sequence = {
 		name: relative(root, dir),
@@ -44,37 +47,41 @@ async function findSequencesRecursive(root: string, dir: string, extensions: str
 	const promises: Promise<void>[] = [];
 	for (const file of files) {
 		const fileResolved = resolve(dir, file);
+		const fileRelative = relative(root, fileResolved);
 		const fileExt = path.extname(fileResolved).replace(/^\./, "");
 
-		promises.push(loadSequencesRecursive(root, fileResolved, fileExt, extensions, sequence, sequences));
+		promises.push(loadSequencesRecursive(root, fileResolved, fileRelative, fileExt, extensions, sequence, sequences));
 	}
 
 	await Promise.all(promises);
 
 	if (sequence.images.length !== 0) {
+		if (settings.verbose) console.log(`Completed sequence "${sequence.name}"`);
 		sequences.push(sequence);
 	}
 }
 
-async function loadSequencesRecursive(root: string, fileResolved: string, fileExt: string, extensions: string[], sequence: Sequence, sequences: SequenceList) {
+async function loadSequencesRecursive(root: string, fileResolved: string, fileRelative: string, fileExt: string, extensions: string[], sequence: Sequence, sequences: SequenceList) {
 	const fileInfo = await fs.stat(fileResolved); // @throws
 
 	if (fileInfo.isFile()) {
 		if (!extensions.includes(fileExt)) return;
+
+		if (settings.verbose) console.log(`Adding file "${fileRelative}: to sequence "${sequence.name}"...`);
+
 		try {
 			const image: Buffer = await fs.readFile(fileResolved, { encoding: null });
 			sequence.images.push(image);
 		} catch (err) {
-			// TODO: Warn the user
+			console.error(`Failed to read image file "${fileRelative}":`, err.message as string);
+			process.exit(1);
 		}
 	} else if (fileInfo.isDirectory()) {
 		try {
 			await findSequencesRecursive(root, fileResolved, extensions, sequences);
 		} catch (err) {
-			// TODO: Warn the user
+			console.warn(`Failed to enumerate directory "${fileRelative}":`, err.message as string);
 		}
-	} else {
-		// TODO: Warn the user
 	}
 }
 
