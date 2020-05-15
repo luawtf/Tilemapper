@@ -1,0 +1,10 @@
+{
+	"name": "tilemapper",
+	"version": "1.0.0",
+	"description": "Generate a tilemap from multiple images",
+	"scripts": {},
+	"devDependencies": {
+		"@types/node": "^14.0.1",
+		"typescript": "^3.9.2"
+	}
+}
