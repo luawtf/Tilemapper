@@ -14,7 +14,7 @@ const yargsConfig = yargs
 	.command("tilemapper [<options>] <directory>", "Generate a tilemap from multiple images")
 	.version(((): string => {
 		try {
-			return require("./package.json").version;
+			return require("../package.json").version;
 		} catch (err) {
 			console.warn("Failed to read version information from package.json");
 			return "Unknown";
@@ -97,8 +97,13 @@ console.log(`Converting sequences from "${settings.input}" to output tilemap "${
 
 	// Convert the map to a buffer
 	let buf: Buffer;
-	if (settings.jpeg) buf = await sharpMap.jpeg().toBuffer();
-	else buf = await sharpMap.png().toBuffer();
+	if (settings.jpeg)
+		buf = await sharpMap
+			.flatten({ background: { r: 255, g: 255, b: 255 } })
+			.jpeg()
+			.toBuffer();
+	else
+		buf = await sharpMap.png().toBuffer();
 
 	// Write it to the disk
 	await fs.writeFile(settings.output, buf);
