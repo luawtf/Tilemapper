@@ -11,7 +11,7 @@ import yargs from "yargs";
 
 /** Set up yargs and its configuration */
 const yargsConfig = yargs
-	.command("tilemapper [<options>] <directory>", "Generate a tilemap from multiple images")
+	.command("[<options>] <directory>", "Generate a tilemap from multiple images")
 	.version(((): string => {
 		try {
 			return require("../package.json").version;
@@ -79,36 +79,40 @@ export const settings = ((): {
 })();
 
 // Say hi!
-console.log(`Converting sequences from "${settings.input}" to output tilemap "${settings.output}"`);
+if (settings.verbose) console.log(`Converting sequences from "${settings.input}" to output tilemap "${settings.output}"`);
 
 // Run everything asynchronously
 (async () => {
-	console.log("Reading sequences...");
+	if (settings.verbose) console.log("Loading images from the disk...");
 
 	// Read sequences
 	const sequences = await readSequences(settings.input);
 
-	console.log("Compositing sequences into a tilemap...");
+	if (settings.verbose) console.log("Generating tilemap composite information...");
 
 	// Composite them into a map
 	const sharpMap = await compositeSequences(sequences, settings.width, settings.height);
 
-	console.log("Writing output file...");
+	if (settings.verbose) console.log(`Compiling output image as a ${settings.jpeg ? "JPEG" : "PNG"}...`);
 
-	// Convert the map to a buffer
-	let buf: Buffer;
-	if (settings.jpeg)
-		buf = await sharpMap
+	let outBuf: Buffer;
+	if (settings.jpeg) {
+		// Output a JPEG
+		outBuf = await sharpMap
 			.flatten({ background: { r: 255, g: 255, b: 255 } })
 			.jpeg()
 			.toBuffer();
-	else
-		buf = await sharpMap.png().toBuffer();
+	} else {
+		// Output a PNG
+		outBuf = await sharpMap.png().toBuffer();
+	}
+
+	if (settings.verbose) console.log("Writing finished tilemap image to the disk...");
 
 	// Write it to the disk
-	await fs.writeFile(settings.output, buf);
+	await fs.writeFile(settings.output, outBuf);
 
-	console.log("Done!");
+	if (settings.verbose) console.log("Done!");
 })()
 	.catch((err) => {
 		console.error(err instanceof Error ? err.message : String(err));

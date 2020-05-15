@@ -67,7 +67,7 @@ async function loadSequencesRecursive(root: string, fileResolved: string, fileRe
 	if (fileInfo.isFile()) {
 		if (!extensions.includes(fileExt)) return;
 
-		if (settings.verbose) console.log(`Adding file "${fileRelative}: to sequence "${sequence.name}"...`);
+		if (settings.verbose) console.log(`Adding file "${fileRelative}" to sequence "${sequence.name}"...`);
 
 		try {
 			const image: Buffer = await fs.readFile(fileResolved, { encoding: null });

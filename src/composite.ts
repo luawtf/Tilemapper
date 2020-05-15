@@ -14,7 +14,7 @@ export async function compositeSequences(sequences: SequenceList, tileWidth: num
 	const tileCountX = maximumSequenceImageCount(sequences);
 	const tileCountY = sequenceListLength(sequences);
 
-	if (settings.verbose) console.log(`Calculating overlays for a tilemap of ${tileCountX}x${tileCountY} size`);
+	if (settings.verbose) console.log(`Creating overlays for a tilemap of ${tileCountX}x${tileCountY} size...`);
 
 	for (let y = 0; y < tileCountY; y++) {
 		const sequence: Sequence = sequences[y];
@@ -47,9 +47,7 @@ export async function compositeSequences(sequences: SequenceList, tileWidth: num
 		}
 
 		if (settings.verbose) console.log(`Added ${x + 1} overlays for row ${y + 1}`);
-	}
-
-	if (settings.verbose) console.log(`Compositing overlays...`);
+	};
 
 	const map =
 	sharp({
