@@ -1,18 +1,20 @@
-/* src/readsequences.ts
-	Read folders of images in as a sequence */
+/* src/sequence.ts
+	Read a folder of images into a sequence */
 
 import { promises as fs } from "fs";
 import path from "path";
 
+/** Collection of tiles that make up an animation */
 export interface Sequence {
 	name: string;
 	images: Buffer[];
 }
+/** List of sequences */
 export type SequenceList = Sequence[];
 
-export function sequenceListLength(sequences: SequenceList): number {
-	return Object.values(sequences).length;
-}
+/** Get the number of sequences in a sequence list */
+export function sequenceListLength(sequences: SequenceList): number { return sequences.length; }
+/** Get the longest length list of tiles in a list of sequences */
 export function maximumSequenceImageCount(sequences: SequenceList): number {
 	let max = 0;
 	for (const sequence of sequences)
@@ -21,6 +23,7 @@ export function maximumSequenceImageCount(sequences: SequenceList): number {
 	return max;
 }
 
+/** Read sequences from a folder */
 export async function readSequences(dir: string, extensions: string[] = ["png", "jpg", "jpeg"]): Promise<SequenceList> {
 	dir = resolve(dir);
 

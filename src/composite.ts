@@ -1,7 +1,11 @@
+/* src/composite.ts
+	Merge multiple sequences into a single tilemap */
+
 import sharp, { Sharp, OverlayOptions } from "sharp";
 
 import { Sequence, SequenceList, maximumSequenceImageCount, sequenceListLength } from "./sequence";
 
+/** Compile a list of sequences into a tile map */
 export async function compositeSequences(sequences: SequenceList, tileWidth: number, tileHeight: number): Promise<Sharp> {
 	const overlays: OverlayOptions[] = [];
 

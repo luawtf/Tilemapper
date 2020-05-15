@@ -5,13 +5,15 @@
 	"scripts": {
 		"test": "tsc && node --enable-source-maps dist"
 	},
+	"dependencies": {
+		"sharp": "^0.25.2",
+		"tslib": "^2.0.0",
+		"yargs": "^15.3.1"
+	},
 	"devDependencies": {
+		"@types/yargs": "^15.0.5",
 		"@types/node": "^14.0.1",
 		"@types/sharp": "^0.25.0",
 		"typescript": "^3.9.2"
-	},
-	"dependencies": {
-		"sharp": "^0.25.2",
-		"tslib": "^2.0.0"
 	}
 }
