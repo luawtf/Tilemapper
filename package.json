@@ -2,9 +2,14 @@
 	"name": "tilemapper",
 	"version": "1.0.0",
 	"description": "Generate a tilemap from multiple images",
-	"scripts": {},
+	"scripts": {
+		"test": "tsc && node --enable-source-maps dist"
+	},
 	"devDependencies": {
 		"@types/node": "^14.0.1",
 		"typescript": "^3.9.2"
+	},
+	"dependencies": {
+		"tslib": "^2.0.0"
 	}
 }
