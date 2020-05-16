@@ -1,6 +1,6 @@
 {
 	"name": "tilemapper",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"description": "Generate a tilemap from folders containing frames of animation or just multiple images",
 	"main": "bin/index.js",
 	"bin": {

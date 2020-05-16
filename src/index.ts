@@ -36,10 +36,10 @@ export interface Configuration {
 }
 
 /** Program binary */
-const binary = process.argv[1];
+const binary = "tilemapper";
 
 /** Version message */
-const version = `${binary} v2.0.0`;
+const version = `${binary} v2.0.1`;
 
 /** Help message */
 const help =
