@@ -41,17 +41,32 @@ npm install -g tilemapper
 ## Usage
 Invoke Tilemapper with the `tilemapper` command.
 ```
-  tilemapper [<options>] <directory>  Generate a tilemap from folders containing
-                                      frames of animation or just multiple
-                                      images
+Usage:
+    tilemapper [options] <directory>
 
 Options:
-  --help         Show help                                             [boolean]
-  --version      Show version number                                   [boolean]
-  --verbose, -v  Enable debug output                  [boolean] [default: false]
-  --width, -w    Width of each tile                      [number] [default: 120]
-  --height, -h   Height of each tile                     [number] [default: 120]
-  --output, -o   Output file path                  [string] [default: "out.png"]
+    -h,-?,--help        Print this help message
+    -V,--version        Print version information
+
+    -v,--verbose        Output verbose logging information
+
+    -o,--output         Output file path (default "tilemap.png")
+
+    -w,--width          Tile width in pixels (default 60)
+    -h,--height         Tile height in pixels (default 60)
+
+    --minimum-x         Minimum tilemap tile count on the X axis (default 0)
+    --minimum-y         Minimum tilemap tile count on the Y axis (default 0)
+
+    -f,--fit            Tile libvips fit mode
+                            One of: "contain", "cover", "fill", "inside",
+                            "outside"
+    -k,--kernel         Tile libvips kernel format
+                            One of: "nearest", "cubic", "mitchell", "lanczos2",
+                            "lanczos3"
+
+Version:
+    tilemapper v2.0.0
 ```
 
 ## Authors

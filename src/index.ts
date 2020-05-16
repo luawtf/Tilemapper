@@ -1,120 +1,202 @@
 /* src/index.ts
-	Application entrypoint */
+	Application entrypoint, parses args and runs functions */
 
-import { promises as fs, read } from "fs";
-import path from "path";
+import minimist from "minimist";
 
 import { readSequences } from "./sequence";
-import { compositeSequences } from "./composite";
+import { compositeSequences, CompositeOptions, isValidFit, isValidKernel } from "./composite";
+import { writeMap } from "./output";
 
-import yargs from "yargs";
+/** Tilemapper options */
+export interface Configuration {
+	/** Output verbose logging messages? (default false) */
+	verbose: boolean;
 
-/** Set up yargs and its configuration */
-const yargsConfig = yargs
-	.command("[<options>] <directory>", "Generate a tilemap from folders containing frames of animation or just multiple images")
-	.version(((): string => {
-		try {
-			return require("../package.json").version;
-		} catch (err) {
-			console.warn("Failed to read version information from package.json");
-			return "Unknown";
-		}
-	})())
-	.nargs('input', 1)
-	.option("verbose", {
-		alias: "v",
-		type: "boolean",
-		description: "Enable debug output",
-		default: false
-	})
-	.option("width", {
-		alias: "w",
-		type: "number",
-		description: "Width of each tile",
-		default: 120
-	})
-	.option("height", {
-		alias: "h",
-		type: "number",
-		description: "Height of each tile",
-		default: 120
-	})
-	.option("output", {
-		alias: "o",
-		type: "string",
-		description: "Output file path",
-		default: "out.png"
-	})
+	/** Input directory (default ".") */
+	inputDir: string;
+	/** Output file (default "tilemap.png") */
+	outputFile: string;
 
-/** Parsed command-line options */
-const argv = yargsConfig.argv;
+	/** Write a JPEG file instead of PNG? (default false) */
+	useJPEG: boolean;
 
-// Make sure we have a <directory>
-if (argv._.length < 1) {
-	yargs.showHelp();
-	process.exit(1);
-} else if (argv._.length > 1) {
-	console.error(`Expected 1 input <directory> argument, got ${argv._.length} input argument(s)`);
-	process.exit(1);
+	/** Tile width (default 60) */
+	width: number;
+	/** Tile height (default 60) */
+	height: number;
+	/** Minimum tile count X (default 0) */
+	minCountX: number;
+	/** Minimum tile count Y (default 0) */
+	minCountY: number;
+
+	/** How to fit tiles (default "cover") */
+	fit: CompositeOptions["tileFit"],
+	/** Algorith used when resizing tiles (default "nearest") */
+	kernel: CompositeOptions["tileKernel"]
 }
 
-/** Current configuration */
-export const settings = ((): {
-	input: string,
-	output: string,
-	jpeg: boolean,
-	width: number,
-	height: number,
-	verbose: boolean
-} => {
-	const useJPEG: boolean = ["jpg", "jpeg"].includes(path.extname(argv.output).replace(/^\./, ""));
-	return {
-		input: argv._[0],
-		output: argv.output,
-		jpeg: useJPEG,
-		width: argv.width,
-		height: argv.height,
-		verbose: argv.verbose
+/** Program binary */
+const binary = process.argv[1];
+
+/** Version message */
+const version = `${binary} v2.0.0`;
+
+/** Help message */
+const help =
+`Usage:
+    ${binary} [options] <directory>
+
+Options:
+    -h,-?,--help        Print this help message
+    -V,--version        Print version information
+
+    -v,--verbose        Output verbose logging information
+
+    -o,--output         Output file path (default "tilemap.png")
+
+    -w,--width          Tile width in pixels (default 60)
+    -h,--height         Tile height in pixels (default 60)
+
+    --minimum-x         Minimum tilemap tile count on the X axis (default 0)
+    --minimum-y         Minimum tilemap tile count on the Y axis (default 0)
+
+    -f,--fit            Tile libvips fit mode
+                            One of: "contain", "cover", "fill", "inside",
+                            "outside"
+    -k,--kernel         Tile libvips kernel format
+                            One of: "nearest", "cubic", "mitchell", "lanczos2",
+                            "lanczos3"
+
+Version:
+    ${version}`;
+
+
+/** Get the message field of an error */
+function errMessage(err: any): string {
+	if (
+		err instanceof Error ||
+		(
+			typeof err === "object" &&
+			"message" in err &&
+			typeof err.message === "string"
+		)
+	)
+		return err.message;
+	else
+		return String(err);
+}
+// Handle program errors
+process.on("uncaughtException", (err: any) => {
+	console.error(errMessage(err));
+	// console.error(err);
+	process.exit(1);
+});
+process.on("unhandledRejection", (err: any, promise: Promise<any>) => {
+	console.error(errMessage(err));
+	// console.error(err);
+	process.exit(1);
+});
+
+// Parse program arguments
+const args = minimist(process.argv.slice(2));
+
+/** Get a string argument */
+function argString(keys: string[], defaultVal: string): string {
+	for (const key of keys) {
+		if (!(key in args)) continue;
+
+		let val: any = args[key];
+		if (typeof val === "string") {
+			val = val.trim();
+			if (val) return val;
+		}
 	}
+	return defaultVal;
+}
+/** Get a number argument */
+function argNumber(keys: string[], defaultVal: number): number {
+	for (const key of keys) {
+		if (!(key in args)) continue;
+
+		let val: any = args[key];
+		if (typeof val === "number" && isFinite(val)) return val;
+		if (typeof val === "string") {
+			const num = parseInt(val);
+			if (isFinite(num)) return num;
+		}
+	}
+	return defaultVal;
+}
+/** Get a boolean argument */
+function argBoolean(keys: string[], defaultVal: boolean): boolean {
+	for (const key of keys) {
+		if (!(key in args)) continue;
+		const val: any = args[key];
+		if (typeof val === "boolean") return val;
+	}
+	return defaultVal;
+}
+
+// Output help message if requested
+if (argBoolean(["h","?","help"], false)) {
+	console.log(help);
+	process.exit(0);
+}
+// Output version message if requested
+if (argBoolean(["V", "version"], false)) {
+	console.log(version);
+	process.exit(0);
+}
+
+// Get input directory
+const inputDir = ((): string => {
+	if (args._.length > 1)
+		throw new Error("Too many inputs specified");
+	if (args._.length < 1 || !args._[0])
+		throw new Error("Missing required argument 'directory'");
+	return String(args._[0]);
 })();
+// Get output file
+const outputFile = argString(["o", "output"], "tilemap.png");
 
-// Say hi!
-if (settings.verbose) console.log(`Converting sequences from "${settings.input}" to output tilemap "${settings.output}"`);
+/** Current configuration */
+export const config: Configuration = {
+	verbose: argBoolean(["v", "verbose"], false),
+	inputDir, outputFile,
+	useJPEG: /\.(jpg|jpeg)$/.test(outputFile),
+	width: argNumber(["w", "width"], 60),
+	height: argNumber(["h", "height"], 60),
+	minCountX: argNumber(["minimum-x"], 0),
+	minCountY: argNumber(["minimum-y"], 0),
+	fit: argString(["f", "fit"], "cover") as CompositeOptions["tileFit"],
+	kernel: argString(["k", "kernel"], "nearest") as CompositeOptions["tileKernel"]
+};
 
-// Run everything asynchronously
+// Check fit and kernel params
+if (!isValidFit(config.fit))
+	throw new Error("Invalid fit method '" + config.fit + "'");
+if (!isValidKernel(config.kernel))
+	throw new Error("Invalid kernel format '" + config.kernel + "'");
+
+/** Running in verbose mode? */
+export const verbose: boolean = config.verbose;
+
+// Do this asynchronusly
 (async () => {
-	if (settings.verbose) console.log("Loading images from the disk...");
 
-	// Read sequences
-	const sequences = await readSequences(settings.input);
+	const sequences = await readSequences(config.inputDir);
 
-	if (settings.verbose) console.log("Generating tilemap composite information...");
-
-	// Composite them into a map
-	const sharpMap = await compositeSequences(sequences, settings.width, settings.height);
-
-	if (settings.verbose) console.log(`Compiling output image as a ${settings.jpeg ? "JPEG" : "PNG"}...`);
-
-	let outBuf: Buffer;
-	if (settings.jpeg) {
-		// Output a JPEG
-		outBuf = await sharpMap
-			.flatten({ background: { r: 255, g: 255, b: 255 } })
-			.jpeg()
-			.toBuffer();
-	} else {
-		// Output a PNG
-		outBuf = await sharpMap.png().toBuffer();
-	}
-
-	if (settings.verbose) console.log("Writing finished tilemap image to the disk...");
-
-	// Write it to the disk
-	await fs.writeFile(settings.output, outBuf);
-
-	if (settings.verbose) console.log("Done!");
-})()
-	.catch((err) => {
-		console.error(err instanceof Error ? err.message : String(err));
-		process.exit(1);
+	const map = await compositeSequences(sequences, {
+		tileWidth: config.width,
+		tileHeight: config.height,
+		minTileCountX: config.minCountX,
+		minTileCountY: config.minCountY,
+		tileFit: config.fit,
+		tileKernel: config.kernel
 	});
+
+	await writeMap(config.outputFile, config.useJPEG, map);
+
+	if (verbose) console.log("Done!");
+
+})();
