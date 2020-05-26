@@ -52,6 +52,8 @@ Options:
 
     -o,--output         Output file path (default "tilemap.png")
 
+    -n,--numsort        Sort numbered images correctly
+
     -w,--width          Tile width in pixels (default 60)
     -h,--height         Tile height in pixels (default 60)
 
@@ -66,7 +68,7 @@ Options:
                             "lanczos3"
 
 Version:
-    tilemapper v2.0.0
+    tilemapper v2.1.0
 ```
 
 ## Authors
