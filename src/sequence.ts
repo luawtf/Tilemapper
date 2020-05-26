@@ -43,7 +43,8 @@ export async function readSequences(dir: string, extensions: string[] = ["png", 
 async function findSequencesRecursive(root: string, dir: string, extensions: string[], sequences: SequenceList): Promise<void> {
 	let files: string[];
 	try {
-		files = (await fs.readdir(dir, { encoding: "utf-8" })).sort();
+		files = await fs.readdir(dir, { encoding: "utf-8" });
+		files = files.sort();
 	} catch (err) {
 		console.warn("Warning: Failed to enumerate directory '%s'", relative(root, dir));
 		return;
@@ -56,16 +57,13 @@ async function findSequencesRecursive(root: string, dir: string, extensions: str
 		images: []
 	};
 
-	const promises: Promise<void>[] = [];
 	for (const file of files) {
 		const fileResolved = resolve(dir, file);
 		const fileRelative = relative(root, fileResolved);
 		const fileExt = path.extname(fileResolved).replace(/^\./, "");
 
-		promises.push(loadSequencesRecursive(root, fileResolved, fileRelative, fileExt, extensions, sequence, sequences));
+		await loadSequencesRecursive(root, fileResolved, fileRelative, fileExt, extensions, sequence, sequences);
 	}
-
-	await Promise.all(promises);
 
 	if (sequence.images.length !== 0) {
 		sequences.push(sequence);
