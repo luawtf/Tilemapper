@@ -39,7 +39,7 @@ export interface Configuration {
 const binary = "tilemapper";
 
 /** Version message */
-const version = `${binary} v2.0.1`;
+const version = `${binary} v2.0.2`;
 
 /** Help message */
 const help =
