@@ -4,7 +4,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-import { verbose } from "./index";
+import { verbose, config } from "./index";
 
 /** Collection of tiles that make up an animation */
 export interface Sequence {
@@ -44,7 +44,13 @@ async function findSequencesRecursive(root: string, dir: string, extensions: str
 	let files: string[];
 	try {
 		files = await fs.readdir(dir, { encoding: "utf-8" });
-		files = files.sort();
+		files = files.sort((a, b) => {
+			if (config.numsort) {
+				a = padNumbers(a);
+				b = padNumbers(b);
+			}
+			return a.localeCompare(b);
+		});
 	} catch (err) {
 		console.warn("Warning: Failed to enumerate directory '%s'", relative(root, dir));
 		return;
@@ -83,6 +89,27 @@ async function loadSequencesRecursive(root: string, fileResolved: string, fileRe
 	} else if (fileInfo.isDirectory()) {
 		await findSequencesRecursive(root, fileResolved, extensions, sequences);
 	}
+}
+
+
+const padNumbersRegex = /\d+(?=.*$)/;
+const padNumbersCount = 10;
+/**
+ * Find and pad the last set of numbers in a string
+ *
+ * Converts something like `hello10-2.png` to `hello10-0000000002.png`
+ */
+function padNumbers(str: string): string {
+	const execArray = padNumbersRegex.exec(str);
+	if (!execArray) return str;
+
+	const matched: string = execArray[0];
+	const matchedIndex: number = execArray.index;
+
+	const padCount = padNumbersCount - matched.length;
+	const zeros: string = "0".repeat(padCount);
+
+	return str.slice(0, matchedIndex) + zeros + str.slice(matchedIndex);
 }
 
 function resolve(...paths: string[]): string {

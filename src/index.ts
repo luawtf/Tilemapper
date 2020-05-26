@@ -20,6 +20,58 @@ export interface Configuration {
 	/** Write a JPEG file instead of PNG? (default false) */
 	useJPEG: boolean;
 
+	/**
+	 * Sort filenames with numbers correctly
+	 *
+	 * So instead of:
+	 * ```txt
+	 * lurker_death_front_new_1.png
+	 * lurker_death_front_new_10.png
+	 * lurker_death_front_new_11.png
+	 * lurker_death_front_new_12.png
+	 * lurker_death_front_new_13.png
+	 * lurker_death_front_new_14.png
+	 * lurker_death_front_new_15.png
+	 * lurker_death_front_new_16.png
+	 * lurker_death_front_new_17.png
+	 * lurker_death_front_new_18.png
+	 * lurker_death_front_new_19.png
+	 * lurker_death_front_new_2.png
+	 * lurker_death_front_new_20.png
+	 * lurker_death_front_new_3.png
+	 * lurker_death_front_new_4.png
+	 * lurker_death_front_new_5 (still).png
+	 * lurker_death_front_new_6.png
+	 * lurker_death_front_new_7.png
+	 * lurker_death_front_new_8.png
+	 * lurker_death_front_new_9.png
+	 * ```
+	 * You get:
+	 * ```txt
+	 * lurker_death_front_new_1.png
+	 * lurker_death_front_new_2.png
+	 * lurker_death_front_new_3.png
+	 * lurker_death_front_new_4.png
+	 * lurker_death_front_new_5 (still).png
+	 * lurker_death_front_new_6.png
+	 * lurker_death_front_new_7.png
+	 * lurker_death_front_new_8.png
+	 * lurker_death_front_new_9.png
+	 * lurker_death_front_new_10.png
+	 * lurker_death_front_new_11.png
+	 * lurker_death_front_new_12.png
+	 * lurker_death_front_new_13.png
+	 * lurker_death_front_new_14.png
+	 * lurker_death_front_new_15.png
+	 * lurker_death_front_new_16.png
+	 * lurker_death_front_new_17.png
+	 * lurker_death_front_new_18.png
+	 * lurker_death_front_new_19.png
+	 * lurker_death_front_new_20.png
+	 * ```
+	 */
+	numsort: boolean;
+
 	/** Tile width (default 60) */
 	width: number;
 	/** Tile height (default 60) */
@@ -39,7 +91,7 @@ export interface Configuration {
 const binary = "tilemapper";
 
 /** Version message */
-const version = `${binary} v2.0.2`;
+const version = `${binary} v2.1.0`;
 
 /** Help message */
 const help =
@@ -53,6 +105,8 @@ Options:
     -v,--verbose        Output verbose logging information
 
     -o,--output         Output file path (default "tilemap.png")
+
+    -n,--numsort        Sort numbered images correctly
 
     -w,--width          Tile width in pixels (default 60)
     -h,--height         Tile height in pixels (default 60)
@@ -164,6 +218,7 @@ export const config: Configuration = {
 	verbose: argBoolean(["v", "verbose"], false),
 	inputDir, outputFile,
 	useJPEG: /\.(jpg|jpeg)$/.test(outputFile),
+	numsort: argBoolean(["n","numsort"], false),
 	width: argNumber(["w", "width"], 60),
 	height: argNumber(["h", "height"], 60),
 	minCountX: argNumber(["minimum-x"], 0),
