@@ -30,7 +30,7 @@ It will produce a 4x3 tilemap like this:
 ```
 
 ## Screenshots
-![Screenshot](./screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/TeamQuay/tilemapper/master/screenshot.png)
 
 ## Installation
 Requires any semi-recent version of [Node.js](https://nodejs.org/) (which comes with NPM).
