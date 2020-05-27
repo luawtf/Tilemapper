@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* src/index.ts
 	Application entrypoint, parses args and runs functions */
 
@@ -91,7 +92,7 @@ export interface Configuration {
 const binary = "tilemapper";
 
 /** Version message */
-const version = `${binary} v2.1.0`;
+const version = `${binary} v2.2.0`;
 
 /** Help message */
 const help =
