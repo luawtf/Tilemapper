@@ -136,8 +136,7 @@ export async function walkPaths(
 	await Promise.all(promises);
 
 	/** Sort file paths */
-	const sorter = new SmartSorter();
-	filePaths.sort((a, b) => sorter.compare(a, b));
+	new SmartSorter().sortInPlace(filePaths);
 
 	/** Return PathInfos */
 	return filePaths.map((filePath) => toPathInfo(workingDirectory, filePath));

@@ -1,7 +1,7 @@
 /* src/smartsorter.ts
 	Sort a list of filenames based on [name, number, direction] */
 
-import { isString } from "util";
+import { isString, isArray } from "util";
 
 /** Cardinal directions enumeration */
 enum Direction { Up, Right, Down, Left };
@@ -126,5 +126,21 @@ export class SmartSorter {
 		const segmentListB = this.toSegmentList(b);
 
 		return compareSegmentLists(segmentListA, segmentListB);
+	}
+	/** Generate a comparison function for use with array.sort */
+	comparator(): (a: any, b: any) => (-1 | 0 | 1) {
+		return (a: any, b: any) => this.compare(a, b);
+	}
+
+	/** Sort an array of strings (not in-place) */
+	sort(a: any[]): string[] {
+		if (!isArray(a)) return [];
+		const list = a.map(String);
+		list.sort(this.comparator());
+		return list;
+	}
+	/** Sort an array of strings (in-place) */
+	sortInPlace<T extends any[]>(a: T): T {
+		return a.sort(this.comparator());
 	}
 }
