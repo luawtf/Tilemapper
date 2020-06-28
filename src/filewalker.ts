@@ -8,8 +8,10 @@ import { SmartSorter } from "./smartsorter";
 
 /** Object containing a path and its parts */
 export interface PathInfo {
-	/** Absolute paths */
+	/** Absolute path */
 	path: string;
+	/** Absolute dirname */
+	dirname: string;
 
 	/** List of directories relative to the working directory */
 	dirnames: string[];
@@ -19,9 +21,11 @@ export interface PathInfo {
 	extname: string; extnameLower: string;
 }
 /** Generate path info from a working directory and a file path */
-function toPathInfo(workingDirectory: string, filePath: string): PathInfo {
+export function toPathInfo(workingDirectory: string, filePath: string): PathInfo {
 	const absolute = path.resolve(filePath);
 	const relative = path.relative(workingDirectory, absolute);
+
+	const dirnameAbsolute = path.dirname(absolute);
 
 	const dirnameFull = path.dirname(relative);
 	const extnameFull = path.extname(relative);
@@ -34,6 +38,7 @@ function toPathInfo(workingDirectory: string, filePath: string): PathInfo {
 
 	return {
 		path: absolute,
+		dirname: dirnameAbsolute,
 		dirnames, basename,
 		extname, extnameLower
 	};

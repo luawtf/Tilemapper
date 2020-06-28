@@ -1,6 +1,8 @@
 /* src/smartsorter.ts
 	Sort a list of filenames based on [name, number, direction] */
 
+import { isString } from "util";
+
 /** Cardinal directions enumeration */
 enum Direction { Up, Right, Down, Left };
 /** Map of English words to directions */
@@ -117,8 +119,8 @@ export class SmartSorter {
 
 	/** Compare two strings */
 	compare(a: any, b: any): (-1 | 0 | 1) {
-		if (typeof a !== "string") a = String(a);
-		if (typeof b !== "string") b = String(b);
+		if (!isString(a)) a = String(a);
+		if (!isString(b)) b = String(b);
 
 		const segmentListA = this.toSegmentList(a);
 		const segmentListB = this.toSegmentList(b);
