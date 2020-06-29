@@ -3,9 +3,9 @@
 
 import { isString, isArray } from "util";
 
-/** Cardinal directions enumeration */
-enum Direction { Up, Right, Down, Left };
-/** Map of English words to directions */
+/** Cardinal directions enumeration. */
+enum Direction { Up, Right, Down, Left }
+/** Map of English words to directions. */
 const directionMap: { [str: string]: Direction } = {
 	"up": Direction.Up, "forward": Direction.Up,
 	"top": Direction.Up, "north": Direction.Up,
@@ -16,19 +16,19 @@ const directionMap: { [str: string]: Direction } = {
 	"left": Direction.Left, "west": Direction.Left,
 	"right": Direction.Right, "east": Direction.Right
 };
-/** Attempt to convert a string to a direction */
+/** Attempt to convert a string to a direction. */
 function asDirection(str: string): Direction | null {
 	return directionMap[str] ?? null;
 }
 
-/** Type of string segment */
+/** Type of string segment. */
 enum SegmentType { Word, Direction, Number, Separator, Null }
-/** Segment tuple definition */
+/** Segment tuple definition. */
 type Segment = [SegmentType, string | number];
 
-/** Regular expression that matches the 3 main types of separator */
+/** Regular expression that matches the 3 main types of separator. */
 const segmentRegexp = /([a-zA-z]+)|([0-9]+)|([^a-zA-Z0-9]+)/g;
-/** Split a string into segments */
+/** Split a string into segments. */
 function segmentize(str: string): Segment[] {
 	const segments: Segment[] = [];
 	let i = 0;
@@ -68,7 +68,7 @@ function segmentize(str: string): Segment[] {
 	return segments;
 }
 
-/** Compare two segment lists against eachother */
+/** Compare two segment lists against eachother. */
 function compareSegmentLists(a: Segment[], b: Segment[]): (-1 | 0 | 1) {
 	const length = Math.max(a.length, b.length);
 
@@ -103,13 +103,13 @@ function compareSegmentLists(a: Segment[], b: Segment[]): (-1 | 0 | 1) {
 }
 
 /**
- * SmartSorter provides alphanum-like comparison function that caches its inputs and results
+ * SmartSorter provides alphanum-like comparison function that caches its inputs and results.
  * NOTE: All inputs are cached by SmartSorter for speed, and are never deleted/flushed, please make sure all SmartSorter instances are short lived!
  */
 export class SmartSorter {
-	/** Cache of segment lists for inputs */
+	/** Cache of segment lists for inputs. */
 	private segmentListCache: { [str: string]: Segment[] | undefined } = {};
-	/** Generate a segment list from a string, or used a cached version if possible */
+	/** Generate a segment list from a string, or used a cached version if possible. */
 	private toSegmentList(str: string): Segment[] {
 		const cached = this.segmentListCache[str];
 		if (cached) return cached;
@@ -117,7 +117,7 @@ export class SmartSorter {
 		return this.segmentListCache[str] = segmentize(str);
 	}
 
-	/** Compare two strings */
+	/** Compare two strings. */
 	compare(a: any, b: any): (-1 | 0 | 1) {
 		if (!isString(a)) a = String(a);
 		if (!isString(b)) b = String(b);
@@ -127,19 +127,19 @@ export class SmartSorter {
 
 		return compareSegmentLists(segmentListA, segmentListB);
 	}
-	/** Generate a comparison function for use with array.sort */
+	/** Generate a comparison function for use with array.sort. */
 	comparator(): (a: any, b: any) => (-1 | 0 | 1) {
 		return (a: any, b: any) => this.compare(a, b);
 	}
 
-	/** Sort an array of strings (not in-place) */
+	/** Sort an array of strings (not in-place). */
 	sort(a: any[]): string[] {
 		if (!isArray(a)) return [];
 		const list = a.map(String);
 		list.sort(this.comparator());
 		return list;
 	}
-	/** Sort an array of strings (in-place) */
+	/** Sort an array of strings (in-place). */
 	sortInPlace<T extends any[]>(a: T): T {
 		return a.sort(this.comparator());
 	}

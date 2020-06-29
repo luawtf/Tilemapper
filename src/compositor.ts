@@ -7,26 +7,52 @@ import { logDebug, logInfo } from "./log";
 
 /** Fit mode to use when resizing tiles, if a tile needs to be resized. */
 export enum ResizeFit {
+	/** Preserving aspect ratio, ensure the image covers both provided dimensions by cropping/clipping to fit. */
 	Contain = "contain",
+	/** Preserving aspect ratio, contain within both provided dimensions using "letterboxing" where necessary. */
 	Cover = "cover",
+	/** Ignore the aspect ratio of the input and stretch to both provided dimensions. */
 	Fill = "fill",
+	/** Preserving aspect ratio, resize the image to be as large as possible while ensuring its dimensions are less than or equal to both those specified. */
 	Inside = "inside",
+	/** Preserving aspect ratio, resize the image to be as small as possible while ensuring its dimensions are greater than or equal to both those specified. */
 	Outside = "outside"
 }
 /** Kernel to use when resizing tiles, if a tile needs to be resized. */
 export enum ResizeKernel {
+	/** Nearest neighbor algorithm. */
 	Nearest = "nearest",
+	/** Bicubic algorithm. */
 	Bicubic = "cubic",
+	/** Mitchell algorithm. */
 	Mitchell = "mitchell",
+	/** Lanczos resampling algorithm 2. */
 	Lancoz2 = "lancoz2",
+	/** Lanczos resampling algorithm 3. */
 	Lancoz3 = "lancoz3"
 }
 
 /** File format to use for output data, PNG is recommended. */
 export enum OutputType { PNG = "png", JPEG = "jpeg", WEBP = "webp", TIFF = "tiff" }
 
-/** Generate an overlay (OverlayOptions) from a file path */
-async function generateOverlay<T extends string | null>(
+/** Output tilemap sizing information. */
+export interface TilemapInfo {
+	/** Width of this tilemap image, in pixels. */
+	width: number;
+	/** Height of this tilemap image, in pixels. */
+	height: number;
+	/** Count of tiles on the X axis. */
+	countX: number;
+	/** Count of tiles on the Y axis. */
+	countY: number;
+	/** Width of a tile in pixels. */
+	tileWidth: number;
+	/** Height of tile in pixels. */
+	tileHeight: number;
+}
+
+/** Generate an overlay (OverlayOptions) from a file path. */
+async function generateOverlay<T extends string | null, R extends (T extends string ? OverlayOptions : null)>(
 	// Input file path (or null)
 	filePath: T,
 	// Width/height of each tile
@@ -35,7 +61,7 @@ async function generateOverlay<T extends string | null>(
 	x: number, y: number,
 	// Resize options
 	fit: ResizeFit, kernel: ResizeKernel
-): Promise<T extends string ? OverlayOptions : null> {
+): Promise<R> {
 	if (filePath === null) return null!;
 
 	logDebug(`composite: Generating overlay for "${filePath}"`);
@@ -55,28 +81,28 @@ async function generateOverlay<T extends string | null>(
 		input: data,
 		top: y * height, left: x * height,
 		gravity: 8
-	} as OverlayOptions as any;
+	} as R;
 }
 
-/** Composite a 2D collection of image paths (tileset) into a tilemap */
+/** Composite a 2D collection of image paths (tileset) into a tilemap. */
 export async function composite(
-	/** 2D array of file paths, ordered [y][x] */
+	/** 2D array of file paths, ordered [y][x]. */
 	inputFiles: (string | null)[][],
-	/** Type of file data to generate */
+	/** Type of file data to generate. */
 	outputType: OutputType = OutputType.PNG,
-	/** Width of each tile */
+	/** Width of each tile. */
 	width: number = 128,
-	/** Height of each tile */
+	/** Height of each tile. */
 	height: number = 128,
-	/** Fit mode for resizing incorrectly sized tiles */
+	/** Fit mode for resizing incorrectly sized tiles. */
 	fit: ResizeFit = ResizeFit.Cover,
-	/** Kernel mode for resizing incorrectly sized tiles */
+	/** Kernel mode for resizing incorrectly sized tiles. */
 	kernel: ResizeKernel = ResizeKernel.Nearest,
-	/** Minimum count of tiles on the X axis */
+	/** Minimum count of tiles on the X axis. */
 	minCountX?: number,
-	/** Minimum count of tiles on the Y axis */
+	/** Minimum count of tiles on the Y axis. */
 	minCountY?: number
-): Promise<Buffer> {
+): Promise<[Buffer, TilemapInfo]> {
 	// Calculate tile counts
 	let countY: number = Math.floor(Math.max(0, minCountY ?? 0, inputFiles.length));
 	let countX: number = Math.floor(Math.max(0, minCountX ?? 0));
@@ -112,8 +138,8 @@ export async function composite(
 	logInfo(`composite: Generated ${overlays.length} overlays, compositing...`);
 
 	// Create image
-	const imageHeight: number = height * countY;
 	const imageWidth: number = width * countX;
+	const imageHeight: number = height * countY;
 	const image: Sharp = sharp({ create: {
 		width: imageWidth,
 		height: imageHeight,
@@ -133,6 +159,18 @@ export async function composite(
 		default: throw new Error(`Invalid OutputType "${outputType}"`);
 	}
 
-	// Return data buffer!
-	return image.toBuffer();
+	// Get data buffer
+	const data: Buffer = await image.toBuffer();
+
+	// Build tilemap info
+	const info: TilemapInfo = {
+		width: imageWidth,
+		height: imageHeight,
+		countX,
+		countY,
+		tileWidth: width,
+		tileHeight: height
+	};
+
+	return [data, info];
 }

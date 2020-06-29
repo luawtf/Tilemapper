@@ -7,21 +7,21 @@ import path from "path";
 import { SmartSorter } from "./smartsorter";
 import { logDebug, logInfo } from "./log";
 
-/** Object containing a path and its parts */
+/** Object containing a path and its parts. */
 export interface PathInfo {
-	/** Absolute path */
+	/** Absolute path. */
 	path: string;
-	/** Absolute dirname */
+	/** Absolute dirname. */
 	dirname: string;
 
-	/** List of directories relative to the working directory */
+	/** List of directories relative to the working directory. */
 	dirnames: string[];
-	/** File name without last extension */
+	/** File name without last extension. */
 	basename: string;
-	/** Extension string without period */
+	/** Extension string without period. */
 	extname: string; extnameLower: string;
 }
-/** Generate path info from a working directory and a file path */
+/** Generate path info from a working directory and a file path. */
 export function toPathInfo(workingDirectory: string, filePath: string): PathInfo {
 	const absolute = path.resolve(filePath);
 	const relative = path.relative(workingDirectory, absolute);
@@ -45,7 +45,7 @@ export function toPathInfo(workingDirectory: string, filePath: string): PathInfo
 	};
 }
 
-/** Check if a file's extension matches an extension list */
+/** Check if a file's extension matches an extension list. */
 function extensionsInclude(extensions: string[] | null, filePath: string): boolean {
 	// Return true if extensions was not provided
 	if (!extensions) return true;
@@ -59,13 +59,13 @@ function extensionsInclude(extensions: string[] | null, filePath: string): boole
 	logDebug(`walk: Skipping file "${filePath}", extensions don't match`);
 	return false;
 }
-/** Recursively walk through a directory (or file) and return all matching file paths */
+/** Recursively walk through a directory (or file) and return all matching file paths. */
 async function walkPath(
-	/** Working directory */
+	/** Working directory. */
 	workingDirectory: string,
-	/** File path to start in/at */
+	/** File path to start in/at. */
 	filePath: string,
-	/** Extensions to match */
+	/** Extensions to match. */
 	extensions: string[] | null,
 	/** Top level? */
 	top: boolean
@@ -108,13 +108,13 @@ async function walkPath(
 	return [];
 }
 
-/** Search one or more paths (recursively) for files (with the correct extensions) */
+/** Search one or more paths (recursively) for files (with the correct extensions). */
 export async function walkPaths(
-	/** Path(s) to search */
+	/** Path(s) to search. */
 	paths: string | string[],
-	/** Extensions to match */
+	/** Extensions to match. */
 	extensions: string[] | null = ["png", "jpg", "jpeg", "gif", "webp", "tiff", "svg"],
-	/** Working directory */
+	/** Working directory. */
 	workingDirectory: string = process.cwd()
 ): Promise<PathInfo[]> {
 	if (typeof paths === "string") paths = [paths];

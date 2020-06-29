@@ -1,80 +1,78 @@
 /* src/layouts.ts
-	*/
+	Functions for laying out input images into tilesets in different ways*/
 
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
 import { logInfo, logWarn } from "./log";
 
-/** Layout information for a tileset */
+/** Base layout information, contains information on a layout and its contents. */
 export interface Layout {
-	/** Tileset data */
+	/** Tileset, a 2D array ([y][x]) of file paths (or nulls) to composite into a tilemap. */
 	tileset: (string | null)[][];
-	/** Tile information */
+	/** Information about each non-null tile in this layout. */
 	tiles: {
-		/** Name of this tile */
+		/** Name of this tile. */
 		name: string;
-		/** Path to this tile image */
+		/** Path to this tile's image. */
 		path: string;
-		/** X position */
+		/** X position (coords, not pixels). */
 		x: number;
-		/** Y position */
+		/** Y position (coords, not pixels). */
 		y: number;
 	}[];
 }
-/** Layout information with sequence locations */
+/** Layout information, contains information on a layout and its contents, with added sequence listing. */
 export interface SequenceLayout extends Layout {
-	/** Sequence information */
+	/** List of sequences in this layout. */
 	sequences: {
-		/** Sequence name */
+		/** Sequence name. */
 		name: string;
-		/** X position */
+		/** X position (coords, not pixels). */
 		row: number;
-		/** Image count */
+		/** Count of images on this row (and in this sequence). */
 		length: number;
 	}[];
 }
-/** Layout information with animation/angle locations */
+/** Layout information, contains information on a layout and its contents, with added animation listing. */
 export interface AnimationLayout extends Layout {
-	/** Animation information */
+	/** List of animations in this layout. */
 	animations: {
-		/** Animation name */
+		/** Animation name. */
 		name: string;
-		/** Available angles for this animation */
+		/** List of angles (sequences, really) in this animation. */
 		angles: {
-			/** Angle degrees */
+			/** Angle degrees. */
 			angle: number;
-			/** X position */
+			/** X position (coords, not pixels). */
 			row: number;
-			/** Image count */
+			/** Count of images on this row (and in this sequence). */
 			length: number;
 		}[];
 	}[];
 }
 
-/** Options for layoutXXXX() */
+/** Options for all layout functions. */
 export interface LayoutOptions {
-	/** Use full paths in tile names */
+	/** Use full directory names in tile names (layout.tiles). */
 	longTileNames?: boolean;
-	/** Optional function for logging warnings */
-	onWarning?: (message: string) => void;
 }
-/** Options for layoutList() */
+/** Options for the layoutList() function. */
 export interface ListLayoutOptions extends LayoutOptions {
-	/** Width of the tilemap */
-	width?: number
-};
-/** Options for layoutSequences() */
+	/** Width (in tiles) of the tilemap to generate. */
+	width?: number;
+}
+/** Options for the layoutSequences() function. */
 export interface SequenceLayoutOptions extends LayoutOptions {
-	/** Use full paths for sequence names */
-	longSequenceNames?: boolean
-};
-/** Options for layoutAnimations() */
+	/** Use full directory names in sequence names (layout.sequences[i]). */
+	longSequenceNames?: boolean;
+}
+/** Options for the layoutAnimations() function. */
 export interface AnimationLayoutOptions extends LayoutOptions {
-	/** Use full paths for animation names */
-	longAnimationNames?: boolean
-};
+	/** Use full directory names in animation names (layout.animations[i]). */
+	longAnimationNames?: boolean;
+}
 
-/** Layout a tilemap in a simple con */
+/** Generate a tilemap layout in the simplest manner possible, just put all input tiles in a continuous list going from left to right, looping back to the next line once "width" is reached. */
 export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptions): Layout {
 	// Unpack options
 	const longTileNames: boolean = options?.longTileNames ?? false;
@@ -113,7 +111,8 @@ export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptio
 
 	return { tileset, tiles };
 }
-/** Layout a tilemap into collections of sequences */
+
+/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuos list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
 export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLayoutOptions): SequenceLayout {
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const longSequenceNames: boolean = options?.longSequenceNames ?? false;
@@ -126,7 +125,7 @@ export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLa
 
 	const pathInfos: PathInfo[] = [...inputPathInfos];
 
-	let y: number = 0; do {
+	let y = 0; do {
 		const pathInfo: PathInfo | null = pathInfos.shift() ?? null;
 		if (!pathInfo) continue;
 
@@ -135,24 +134,24 @@ export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLa
 			name: longSequenceNames
 				? pathInfo.dirnames.join("/")
 				: pathInfo.dirnames[pathInfo.dirnames.length - 1],
-			row: y++,
+			row: y,
 			length: 0
 		};
 
 		let x: number = 0;
-		const tilesetRow: (string | null)[] = tileset[y] = [];
+		const tilesetRow: (string | null)[] = tileset[y++] = [];
 
 		let curPathInfo: PathInfo | null = pathInfo;
 		do {
 			if (!curPathInfo) curPathInfo = pathInfos.shift() ?? null;
 			if (!curPathInfo) break;
 
-			tilesetRow[x++] = pathInfo.path;
+			tilesetRow[x++] = curPathInfo.path;
 
 			tiles.push({
-				name:	(longTileNames ? pathInfo.dirnames.join("/") + "/" : "") +
-					pathInfo.basename,
-				path: pathInfo.path,
+				name:	(longTileNames ? curPathInfo.dirnames.join("/") + "/" : "") +
+					curPathInfo.basename,
+				path: curPathInfo.path,
 				x, y
 			});
 
@@ -168,7 +167,49 @@ export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLa
 
 	return { tileset, tiles, sequences };
 }
-/** Layout a tilemap into collections of animations, with different sequences for each angle */
+
+/**
+ * Generate a tilemap layout that contains "animations", where each animation has sub-sequences for different angles.
+ * This will take a file structure like:
+ * ```
+ * root/
+ *   anim1/
+ *     0/   [frame1.png, frame2.png, frame3.png]
+ *     90/  [frame1.png, frame2.png, frame3.png]
+ *     180/ [frame1.png, frame2.png, frame3.png]
+ *     270/ [frame1.png, frame2.png, frame3.png]
+ *   anim2/
+ *     0/   [frame1.png, frame2.png, frame3.png]
+ *     90/  [frame1.png, frame2.png, frame3.png]
+ *     180/ [frame1.png, frame2.png, frame3.png]
+ *     270/ [frame1.png, frame2.png, frame3.png]
+ * ```
+ * And output something like:
+ * ```json
+ * {
+ *   "animations": [
+ *     {
+ *       "name": "anim1",
+ *       "angles": [
+ *         { ... },
+ *         { ... },
+ *         { ... },
+ *         { ... }
+ *       ]
+ *     },
+ *     {
+ *       "name": "anim2",
+ *       "angles": [
+ *         { ... },
+ *         { ... },
+ *         { ... },
+ *         { ... }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * ```
+ */
 export function layoutAnimations(inputPathInfos: PathInfo[], options?: AnimationLayoutOptions): AnimationLayout {
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const longAnimationNames: boolean = options?.longAnimationNames ?? false;
@@ -191,6 +232,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		}
 	} = {};
 
+	// Populate animationPaths
 	for (let i = 0; i < inputPathInfos.length; i++) {
 		const pathInfo = inputPathInfos[i];
 		if (!pathInfo) continue;
@@ -200,7 +242,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		const sequenceDirname: string | null = dirnames.length > 0 ? dirnames.join("/") : null;
 
 		if (!angleDirname || !sequenceDirname) {
-			options?.onWarning?.(`Path "${pathInfo.path}" ${
+			logWarn(`Path "${pathInfo.path}" ${
 					!angleDirname		? "has an invalid angle string"
 				:	!sequenceDirname	? "has an invalid sequence name"
 				:	"is invalid"
@@ -212,7 +254,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		let name: string | null = longAnimationNames ? sequenceDirname : (dirnames.shift() ?? null);
 
 		if (angle === null || name === null) {
-			options?.onWarning?.(`Path "${pathInfo.path}" ${
+			logWarn(`Path "${pathInfo.path}" ${
 					angle === null		? "has an invalid angle"
 				:	name === null		? "has an invalid name"
 				:	"failed to parse"
@@ -234,6 +276,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 			animationPath.angles[angle].paths.push(pathInfo);
 	}
 
+	// Interpret animationPaths
 	const dirnames: string[] = new SmartSorter().sortInPlace(Object.keys(animationPaths));
 	for (let i = 0; i < dirnames.length; i++) {
 		const dirname = dirnames[i];
