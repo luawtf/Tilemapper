@@ -3,7 +3,7 @@
 
 import sharp, { Sharp, OverlayOptions, FitEnum, KernelEnum } from "sharp";
 
-/** Resize fit settings (maps to FitEnum) */
+/** Fit settings for resizing tiles */
 export enum ResizeFit {
 	Contain = "contain",
 	Cover = "cover",
@@ -11,7 +11,7 @@ export enum ResizeFit {
 	Inside = "inside",
 	Outside = "outside"
 }
-/** Resize kernel settings (maps to KernelEnum) */
+/** Kernel to use for resizing tiles */
 export enum ResizeKernel {
 	Nearest = "nearest",
 	Bicubic = "cubic",
@@ -20,7 +20,7 @@ export enum ResizeKernel {
 	Lancoz3 = "lancoz3"
 }
 
-/** Output file/data type */
+/** Output data format, PNG recommended */
 export enum OutputType { PNG, JPEG, WEBP, TIFF }
 
 /** Generate an overlay (OverlayOptions) from a file path */

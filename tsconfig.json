@@ -13,7 +13,7 @@
 		"noEmitOnError": true,
 		// "tsBuildInfoFile": "./.tscache",		/* Specify file to store incremental compilation information */
 
-		"removeComments": true,				/* Do not emit comments to output. */
+		"removeComments": false,			/* Do not emit comments to output. */
 		"importHelpers": true,				/* Import emit helpers from 'tslib'. */
 
 		"strict": true,					/* Enable all strict type-checking options. */

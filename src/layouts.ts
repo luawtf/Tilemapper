@@ -1,112 +1,269 @@
 /* src/layouts.ts
-	Functions for generating tilesets (for the compositor) from a collection of input image paths */
+	*/
 
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
 
-/** Base layout, only tileset information */
+/** Layout information for a tileset */
 export interface Layout {
+	/** Tileset data */
 	tileset: (string | null)[][];
-}
-/** Generate a simple tileset that is just a continuos list of tiles, with a specific width */
-export function layoutList(inputPathInfos: PathInfo[], width: number = 64): Layout {
-	// Unpack paths
-	const inputPaths: string[] = inputPathInfos.map((pathInfo) => pathInfo.path);
-
-	// Output 2D array
-	const output: (string | null)[][] = [];
-
-	// Loop through rows
-	let y = 0; do {
-		const row: (string | null)[] = [];
-
-		// Loop through columns
-		for (let x = 0; x < width; x++) {
-			const filePath: string | null = inputPaths.shift() ?? null;
-			row[x] = filePath;
-		}
-
-		output[y++] = row;
-	} while (inputPaths.length > 0);
-
-	return { tileset: output };
-}
-
-/** Sequence layout, contains sequence information */
-export interface SequenceLayout extends Layout {
-	/** List of sequences */
-	sequences: {
-		/** Name of this sequence */
+	/** Tile information */
+	tiles: {
+		/** Name of this tile */
 		name: string;
-		/** Sequence row number (zero-indexed) */
+		/** Path to this tile image */
+		path: string;
+		/** X position */
+		x: number;
+		/** Y position */
+		y: number;
+	}[];
+}
+/** Layout information with sequence locations */
+export interface SequenceLayout extends Layout {
+	/** Sequence information */
+	sequences: {
+		/** Sequence name */
+		name: string;
+		/** X position */
 		row: number;
-		/** Length of this sequence */
+		/** Image count */
 		length: number;
 	}[];
 }
-/** Generate a tileset of sequences */
-export function layoutAnimatedSequences(inputPathInfos: PathInfo[], topLevelNames: boolean = true): SequenceLayout {
-	// Path information for each sequence entry
-	const sequencePaths: {
-		[dirname: string]: {
-			firstPathInfo: PathInfo;
-			paths: string[];
+/** Layout information with animation/angle locations */
+export interface AnimationLayout extends Layout {
+	/** Animation information */
+	animations: {
+		/** Animation name */
+		name: string;
+		/** Available angles for this animation */
+		angles: {
+			/** Angle degrees */
+			angle: number;
+			/** X position */
+			row: number;
+			/** Image count */
+			length: number;
+		}[];
+	}[];
+}
+
+/** Options for layoutXXXX() */
+export interface LayoutOptions {
+	/** Use full paths in tile names */
+	longTileNames?: boolean;
+	/** Optional function for logging warnings */
+	onWarning?: (message: string) => void;
+}
+/** Options for layoutList() */
+export interface ListLayoutOptions extends LayoutOptions {
+	/** Width of the tilemap */
+	width?: number
+};
+/** Options for layoutSequences() */
+export interface SequenceLayoutOptions extends LayoutOptions {
+	/** Use full paths for sequence names */
+	longSequenceNames?: boolean
+};
+/** Options for layoutAnimations() */
+export interface AnimationLayoutOptions extends LayoutOptions {
+	/** Use full paths for animation names */
+	longAnimationNames?: boolean
+};
+
+/** Layout a tilemap in a simple con */
+export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptions): Layout {
+	// Unpack options
+	const longTileNames: boolean = options?.longTileNames ?? false;
+	const width: number = options?.width ?? 64;
+
+	// Create output layout contents
+	const tileset: Layout["tileset"] = [];
+	const tiles: Layout["tiles"] = [];
+
+	// Duplicate input
+	const pathInfos: PathInfo[] = [...inputPathInfos];
+
+	// Loop through rows
+	let y = 0; do {
+		const row: Layout["tileset"][0] = [];
+
+		// Loop through col
+		for (let x = 0; x < width; x++) {
+			const pathInfo: PathInfo | null = pathInfos.shift() ?? null;
+			row[x] = pathInfo?.path ?? null;
+
+			if (pathInfo !== null) {
+				tiles.push({
+					name:	(longTileNames ? pathInfo.dirnames.join("/") + "/" : "") +
+						pathInfo.basename,
+					path: pathInfo.path,
+					x, y
+				});
+			}
+		}
+
+		tileset[y++] = row;
+	} while (pathInfos.length > 0);
+
+	return { tileset, tiles };
+}
+/** Layout a tilemap into collections of sequences */
+export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLayoutOptions): SequenceLayout {
+	const longTileNames: boolean = options?.longTileNames ?? false;
+	const longSequenceNames: boolean = options?.longSequenceNames ?? false;
+
+	const tileset: Layout["tileset"] = [];
+	const tiles: Layout["tiles"] = [];
+	const sequences: SequenceLayout["sequences"] = [];
+
+	const pathInfos: PathInfo[] = [...inputPathInfos];
+
+	let y: number = 0; do {
+		const pathInfo: PathInfo | null = pathInfos.shift() ?? null;
+		if (!pathInfo) continue;
+
+		const dirname = pathInfo.dirname;
+		const sequence: SequenceLayout["sequences"][0] = {
+			name: longSequenceNames
+				? pathInfo.dirnames.join("/")
+				: pathInfo.dirnames[pathInfo.dirnames.length - 1],
+			row: y++,
+			length: 0
+		};
+
+		let x: number = 0;
+		const tilesetRow: (string | null)[] = tileset[y] = [];
+
+		let curPathInfo: PathInfo | null = pathInfo;
+		do {
+			if (!curPathInfo) curPathInfo = pathInfos.shift() ?? null;
+			if (!curPathInfo) break;
+
+			tilesetRow[x++] = pathInfo.path;
+
+			tiles.push({
+				name:	(longTileNames ? pathInfo.dirnames.join("/") + "/" : "") +
+					pathInfo.basename,
+				path: pathInfo.path,
+				x, y
+			});
+
+			sequence.length++;
+
+			curPathInfo = null;
+		} while (pathInfos[0]?.dirname === dirname);
+
+		sequences.push(sequence);
+	} while (pathInfos.length > 0);
+
+	return { tileset, tiles, sequences };
+}
+/** Layout a tilemap into collections of animations, with different sequences for each angle */
+export function layoutAnimations(inputPathInfos: PathInfo[], options?: AnimationLayoutOptions): AnimationLayout {
+	const longTileNames: boolean = options?.longTileNames ?? false;
+	const longAnimationNames: boolean = options?.longAnimationNames ?? false;
+
+	const tileset: Layout["tileset"] = [];
+	const tiles: Layout["tiles"] = [];
+	const animations: AnimationLayout["animations"] = [];
+
+	const animationPaths: {
+		[sequenceDirname: string]: {
+			name: string;
+			angles: {
+				[angleDirname: string]: {
+					angle: number;
+					paths: PathInfo[];
+				}
+			}
 		}
 	} = {};
 
-	// Populate sequencePaths
 	for (let i = 0; i < inputPathInfos.length; i++) {
 		const pathInfo = inputPathInfos[i];
 		if (!pathInfo) continue;
 
-		const dirname = pathInfo.dirname;
-		const path = pathInfo.path;
-		if (sequencePaths[dirname]) {
-			sequencePaths[dirname].paths.push(path);
-		} else {
-			sequencePaths[dirname] = {
-				firstPathInfo: pathInfo,
-				paths: [path]
+		const dirnames = [...pathInfo.dirnames];
+		const angleDirname: string | null = dirnames.shift() ?? null;
+		const sequenceDirname: string | null = dirnames.length > 0 ? dirnames.join("/") : null;
+
+		if (!angleDirname || !sequenceDirname) {
+			options?.onWarning?.(`Path "${pathInfo.path}" ${
+					!angleDirname		? "has an invalid angle string"
+				:	!sequenceDirname	? "has an invalid sequence name"
+				:	"is invalid"
+			}`);
+			continue;
+		}
+
+		let angle: number | null = Number(angleDirname); angle = angle === angle ? angle : null;
+		let name: string | null = longAnimationNames ? sequenceDirname : (dirnames.shift() ?? null);
+
+		if (angle === null || name === null) {
+			options?.onWarning?.(`Path "${pathInfo.path}" ${
+					angle === null		? "has an invalid angle"
+				:	name === null		? "has an invalid name"
+				:	"failed to parse"
+			}`);
+			continue;
+		}
+
+		if (!animationPaths[sequenceDirname]) {
+			animationPaths[sequenceDirname] = {
+				name,
+				angles: {}
 			};
 		}
+		const animationPath = animationPaths[sequenceDirname];
+
+		if (!animationPath.angles[angle])
+			animationPath.angles[angle] = { angle, paths: [pathInfo] };
+		else
+			animationPath.angles[angle].paths.push(pathInfo);
 	}
 
-	const tileset: (string | null)[][] = [];
-	const sequences: SequenceLayout["sequences"] = [];
+	const dirnames: string[] = new SmartSorter().sortInPlace(Object.keys(animationPaths));
+	for (let i = 0; i < dirnames.length; i++) {
+		const dirname = dirnames[i];
+		const animationPath = animationPaths[dirname];
 
-	// Generate tileset and sequence listing
-	const keys: string[] = new SmartSorter().sortInPlace(Object.keys(sequencePaths));
-	for (let i = 0; i < keys.length; i++) {
-		const key = keys[i];
-		const sequencePathList = sequencePaths[key];
+		const animation: AnimationLayout["animations"][0] = {
+			name: animationPath.name,
+			angles: []
+		};
+		const angles = animation.angles;
 
-		const name: string = topLevelNames
-			? sequencePathList.firstPathInfo.dirnames[sequencePathList.firstPathInfo.dirnames.length - 1]
-			: sequencePathList.firstPathInfo.dirnames.join("/");
-		const row: string[] = sequencePathList.paths;
-		const length: number = row.length;
+		const angleKeys: number[] = Object.keys(animationPath.angles).map(Number).sort();
+		for (let ii = 0; ii < angleKeys.length; ii++) {
+			const angleKey: number = angleKeys[ii];
+			const anglePaths = animationPath.angles[angleKey];
 
-		tileset[i] = row;
-		sequences[i] = { name, row: i, length };
+			const rowIndex = tileset.push([]) - 1;
+			const row = tileset[rowIndex];
+
+			const length = anglePaths.paths.length;
+
+			for (let x = 0; x < anglePaths.paths.length; x++) {
+				const pathInfo = anglePaths.paths[x];
+
+				row[x] = pathInfo.path;
+
+				tiles.push({
+					name:	(longTileNames ? pathInfo.dirnames.join("/") + "/" : "") +
+						pathInfo.basename,
+					path: pathInfo.path,
+					x, y: rowIndex
+				});
+			}
+
+			angles.push({ angle: angleKey, row: rowIndex, length });
+		}
+
+		animations.push(animation);
 	}
 
-	return { tileset, sequences };
-}
-
-/** Animation layout, contains a list of animations with sequences for each possible angle */
-export interface AnimatedLayout extends Layout {
-	/** List of animations */
-	animations: {
-		/** Name of this animation */
-		name: string;
-		/** Dictionary of angles to sequence information */
-		angles: { [deg: number]: {
-			row: number;
-			length: number;
-		} }
-	}[];
-}
-export function layoutAnimatedAnimations(inputPathInfos: PathInfo[]): AnimatedLayout {
-	// TODO
-	throw new Error("Unimplemented");
+	return { tileset, tiles, animations };
 }
