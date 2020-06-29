@@ -3,6 +3,7 @@
 
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
+import { logInfo, logWarn } from "./log";
 
 /** Layout information for a tileset */
 export interface Layout {
@@ -79,6 +80,8 @@ export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptio
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const width: number = options?.width ?? 64;
 
+	logInfo(`layoutList: Laying out ${inputPathInfos.length} images with width ${width}`);
+
 	// Create output layout contents
 	const tileset: Layout["tileset"] = [];
 	const tiles: Layout["tiles"] = [];
@@ -114,6 +117,8 @@ export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptio
 export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLayoutOptions): SequenceLayout {
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const longSequenceNames: boolean = options?.longSequenceNames ?? false;
+
+	logInfo(`layoutSequences: Laying out ${inputPathInfos.length} images`);
 
 	const tileset: Layout["tileset"] = [];
 	const tiles: Layout["tiles"] = [];
@@ -159,12 +164,16 @@ export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLa
 		sequences.push(sequence);
 	} while (pathInfos.length > 0);
 
+	logInfo(`layoutSequences: Generated ${sequences.length} sequences`);
+
 	return { tileset, tiles, sequences };
 }
 /** Layout a tilemap into collections of animations, with different sequences for each angle */
 export function layoutAnimations(inputPathInfos: PathInfo[], options?: AnimationLayoutOptions): AnimationLayout {
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const longAnimationNames: boolean = options?.longAnimationNames ?? false;
+
+	logInfo(`layoutAnimations: Laying out ${inputPathInfos.length} images`);
 
 	const tileset: Layout["tileset"] = [];
 	const tiles: Layout["tiles"] = [];
@@ -264,6 +273,8 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 
 		animations.push(animation);
 	}
+
+	logInfo(`layoutAnimations: Generated ${animations.length} animations`);
 
 	return { tileset, tiles, animations };
 }

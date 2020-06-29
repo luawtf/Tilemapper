@@ -5,6 +5,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { SmartSorter } from "./smartsorter";
+import { logDebug, logInfo } from "./log";
 
 /** Object containing a path and its parts */
 export interface PathInfo {
@@ -55,6 +56,7 @@ function extensionsInclude(extensions: string[] | null, filePath: string): boole
 		if (extensions[i] === extnameLower) return true;
 	}
 	// Return false if it doesn't
+	logDebug(`walk: Skipping file "${filePath}", extensions don't match`);
 	return false;
 }
 /** Recursively walk through a directory (or file) and return all matching file paths */
@@ -71,6 +73,8 @@ async function walkPath(
 	const stats = await fs.stat(filePath);
 
 	if (stats.isDirectory()) {
+		logDebug(`walk: Walking directory "${filePath}"`);
+
 		// Generate a list of absolute file paths to walk to
 		const filePaths =
 			(await fs.readdir(filePath, { encoding: "utf-8" }))
@@ -97,6 +101,7 @@ async function walkPath(
 		// Make sure this file matches
 		if (!top && !extensionsInclude(extensions, filePath)) return [];
 		// Cool! Return just this file since its not a directory
+		logDebug(`walk: Adding file "${filePath}"`);
 		return [filePath];
 	}
 
@@ -120,10 +125,12 @@ export async function walkPaths(
 		extensions = null;
 	}
 
-	/** Resulting file paths (will be converted to a PathInfo[]) */
+	logInfo(`walk: Running on paths "${paths.join(",")}"`);
+
+	// Resulting file paths (will be converted to a PathInfo[])
 	const filePaths: string[] = [];
 
-	/** Walk through all inputted paths */
+	// Walk through all inputted paths
 	const promises: Promise<void>[] = [];
 	for (let i = 0; i < paths.length; i++) {
 		const filePath = path.resolve(workingDirectory, paths[i]);
@@ -132,12 +139,13 @@ export async function walkPaths(
 				.then((subFilePaths) => void filePaths.push(...subFilePaths));
 	}
 
-	/** Wait for all walking to complete */
+	// Wait for all walking to complete
 	await Promise.all(promises);
+	logInfo("walk: Completed");
 
-	/** Sort file paths */
+	// Sort file paths
 	new SmartSorter().sortInPlace(filePaths);
 
-	/** Return PathInfos */
+	// Return PathInfos
 	return filePaths.map((filePath) => toPathInfo(workingDirectory, filePath));
 }

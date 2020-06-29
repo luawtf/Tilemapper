@@ -3,7 +3,9 @@
 
 import sharp, { Sharp, OverlayOptions, FitEnum, KernelEnum } from "sharp";
 
-/** Fit settings for resizing tiles */
+import { logDebug, logInfo } from "./log";
+
+/** Fit mode to use when resizing tiles, if a tile needs to be resized. */
 export enum ResizeFit {
 	Contain = "contain",
 	Cover = "cover",
@@ -11,7 +13,7 @@ export enum ResizeFit {
 	Inside = "inside",
 	Outside = "outside"
 }
-/** Kernel to use for resizing tiles */
+/** Kernel to use when resizing tiles, if a tile needs to be resized. */
 export enum ResizeKernel {
 	Nearest = "nearest",
 	Bicubic = "cubic",
@@ -20,8 +22,8 @@ export enum ResizeKernel {
 	Lancoz3 = "lancoz3"
 }
 
-/** Output data format, PNG recommended */
-export enum OutputType { PNG, JPEG, WEBP, TIFF }
+/** File format to use for output data, PNG is recommended. */
+export enum OutputType { PNG = "png", JPEG = "jpeg", WEBP = "webp", TIFF = "tiff" }
 
 /** Generate an overlay (OverlayOptions) from a file path */
 async function generateOverlay<T extends string | null>(
@@ -35,6 +37,8 @@ async function generateOverlay<T extends string | null>(
 	fit: ResizeFit, kernel: ResizeKernel
 ): Promise<T extends string ? OverlayOptions : null> {
 	if (filePath === null) return null!;
+
+	logDebug(`composite: Generating overlay for "${filePath}"`);
 
 	// Load and resize image
 	const image: Sharp = sharp(filePath!).resize({
@@ -76,9 +80,13 @@ export async function composite(
 	// Calculate tile counts
 	let countY: number = Math.floor(Math.max(0, minCountY ?? 0, inputFiles.length));
 	let countX: number = Math.floor(Math.max(0, minCountX ?? 0));
-	for (let y = 0; y < inputFiles.length; y++)
-		if (inputFiles[y].length > countX)
+	for (let y = 0; y < inputFiles.length; y++) {
+		if (inputFiles[y].length > countX) {
 			countX = inputFiles[y].length;
+		}
+	}
+
+	logInfo(`composite: Compositing tilemap with ${countX}x${countY} tiles (${countX * width}x${countY * height})`);
 
 	// Computed overlays
 	const overlays: OverlayOptions[] = [];
@@ -100,6 +108,8 @@ export async function composite(
 		}
 	}
 	await Promise.all(promises);
+
+	logInfo(`composite: Generated ${overlays.length} overlays, compositing...`);
 
 	// Create image
 	const imageHeight: number = height * countY;
