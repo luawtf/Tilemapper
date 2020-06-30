@@ -3,7 +3,7 @@
 
 import sharp, { Sharp, OverlayOptions, FitEnum, KernelEnum } from "sharp";
 
-import { logDebug, logInfo } from "./log";
+import { logDebug, logInfo, logPath } from "./log";
 
 /** Fit mode to use when resizing tiles, if a tile needs to be resized. */
 export enum ResizeFit {
@@ -64,8 +64,6 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 ): Promise<R> {
 	if (filePath === null) return null!;
 
-	logDebug(`composite: Generating overlay for "${filePath}"`);
-
 	// Load and resize image
 	const image: Sharp = sharp(filePath!).resize({
 		width, height,
@@ -76,12 +74,15 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 	// Generate output image data (as PNG for memory reasons)
 	const data: Buffer = await image.png().toBuffer();
 
-	// Return output overlay
-	return {
+	// Create output overlay
+	const overlay = {
 		input: data,
 		top: y * height, left: x * height,
 		gravity: 8
-	} as R;
+	} as R
+
+	logDebug(`composite: Generated overlay for "${logPath(filePath)}"`);
+	return overlay;
 }
 
 /** Composite a 2D collection of image paths (tileset) into a tilemap. */

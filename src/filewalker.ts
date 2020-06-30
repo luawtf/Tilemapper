@@ -5,7 +5,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { SmartSorter } from "./smartsorter";
-import { logDebug, logInfo } from "./log";
+import { logDebug, logInfo, logPath } from "./log";
 
 /** Object containing a path and its parts. */
 export interface PathInfo {
@@ -56,7 +56,7 @@ function extensionsInclude(extensions: string[] | null, filePath: string): boole
 		if (extensions[i] === extnameLower) return true;
 	}
 	// Return false if it doesn't
-	logDebug(`walk: Skipping file "${filePath}", extensions don't match`);
+	logDebug(`walk: Skipping file "${logPath(filePath)}", extensions don't match`);
 	return false;
 }
 /** Recursively walk through a directory (or file) and return all matching file paths. */
@@ -73,7 +73,7 @@ async function walkPath(
 	const stats = await fs.stat(filePath);
 
 	if (stats.isDirectory()) {
-		logDebug(`walk: Walking directory "${filePath}"`);
+		logDebug(`walk: Walking directory "${logPath(filePath)}"`);
 
 		// Generate a list of absolute file paths to walk to
 		const filePaths =
@@ -101,7 +101,7 @@ async function walkPath(
 		// Make sure this file matches
 		if (!top && !extensionsInclude(extensions, filePath)) return [];
 		// Cool! Return just this file since its not a directory
-		logDebug(`walk: Adding file "${filePath}"`);
+		logDebug(`walk: Adding file "${logPath(filePath)}"`);
 		return [filePath];
 	}
 

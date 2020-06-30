@@ -3,7 +3,7 @@
 
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
-import { logInfo, logWarn } from "./log";
+import { logInfo, logWarn, logPath } from "./log";
 
 /** Base layout information, contains information on a layout and its contents. */
 export interface Layout {
@@ -242,7 +242,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		const sequenceDirname: string | null = dirnames.length > 0 ? dirnames.join("/") : null;
 
 		if (!angleDirname || !sequenceDirname) {
-			logWarn(`Path "${pathInfo.path}" ${
+			logWarn(`Path "${logPath(pathInfo.path)}" ${
 					!angleDirname		? "has an invalid angle string"
 				:	!sequenceDirname	? "has an invalid sequence name"
 				:	"is invalid"
@@ -254,7 +254,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		let name: string | null = longAnimationNames ? sequenceDirname : (dirnames.shift() ?? null);
 
 		if (angle === null || name === null) {
-			logWarn(`Path "${pathInfo.path}" ${
+			logWarn(`Path "${logPath(pathInfo.path)}" ${
 					angle === null		? "has an invalid angle"
 				:	name === null		? "has an invalid name"
 				:	"failed to parse"
