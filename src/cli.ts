@@ -74,12 +74,13 @@ Options:
 
     -f,--fit            Fit mode to use when resizing tiles, if a tile needs to
                         be resized. Valid values include: "contain", "cover",
-                        "fill", "inside", and "outside". Please see online
-                        documentation for more information
+                        "fill", "inside", and "outside". Defaults to "contain".
+                        Please see online documentation for more information
     -k,--kernel         Kernel mode to use when resizing tiles, if a tile needs
                         to be resized. Valid values include: "nearest", "cubic",
-                        "mitchell", "lancoz2", and "lancoz3". Please see online
-                        documentation for more information
+                        "mitchell", "lancoz2", and "lancoz3". Defaults to
+                        "nearest". Please see online documentation for more
+                        information
 
 Version:
     ${versionString}`;
