@@ -1,10 +1,10 @@
 {
 	"name": "tilemapper",
-	"version": "3.0.0-PRERELEASE",
+	"version": "3.0.0",
 	"description": "Generate basic tilemaps from multiple images, or go beyond with automatic animation generation or directional tilemaps.",
-	"main": "bin/index.js",
+	"main": "dist/index.js",
 	"bin": {
-		"tilemapper": "bin/cli.js"
+		"tilemapper": "dist/cli.js"
 	},
 	"scripts": {
 		"build": "tsc",
@@ -30,12 +30,12 @@
 		"gamedev",
 		"animation"
 	],
-	"homepage": "https://github.com/luawtf/Tilemapper#readme",
+	"homepage": "https://github.com/TeamQuay/Tilemapper#readme",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/luawtf/Tilemapper.git"
+		"url": "git+https://github.com/TeamQuay/Tilemapper.git"
 	},
 	"bugs": {
-		"url": "https://github.com/luawtf/Tilemapper/issues"
+		"url": "https://github.com/TeamQuay/Tilemapper/issues"
 	}
 }
