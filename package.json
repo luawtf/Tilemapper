@@ -1,17 +1,18 @@
 {
 	"name": "tilemapper",
-	"version": "2.2.0",
-	"description": "Generate a tilemap from folders containing frames of animation or just multiple images",
-	"main": "bin/index.js",
+	"version": "3.0.0",
+	"description": "Generate basic tilemaps from multiple images, or go beyond with automatic animation generation or directional tilemaps.",
+	"main": "dist/index.js",
 	"bin": {
-		"tilemapper": "bin/index.js"
+		"tilemapper": "dist/cli.js"
 	},
 	"scripts": {
 		"build": "tsc",
-		"prepublish": "tsc"
+		"prepublishOnly": "tsc"
 	},
 	"dependencies": {
 		"minimist": "^1.2.5",
+		"ora": "^4.0.4",
 		"sharp": "^0.25.2",
 		"tslib": "^2.0.0"
 	},
@@ -19,9 +20,9 @@
 		"@types/minimist": "^1.2.0",
 		"@types/node": "^14.0.1",
 		"@types/sharp": "^0.25.0",
-		"typescript": "^3.9.2"
+		"typescript": "^4.0.0-beta"
 	},
-	"author": "Jack MacDougall <luawhat@gmail.com> (https://lua.wtf/)",
+	"author": "Lua MacDougall <luawhat@gmail.com> (https://lua.wtf/)",
 	"license": "MIT",
 	"keywords": [
 		"tilemap",
@@ -29,12 +30,12 @@
 		"gamedev",
 		"animation"
 	],
-	"homepage": "https://github.com/luawtf/tilemapper#readme",
+	"homepage": "https://github.com/TeamQuay/Tilemapper#readme",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/luawtf/tilemapper.git"
+		"url": "git+https://github.com/TeamQuay/Tilemapper.git"
 	},
 	"bugs": {
-		"url": "https://github.com/luawtf/tilemapper/issues"
+		"url": "https://github.com/TeamQuay/Tilemapper/issues"
 	}
 }

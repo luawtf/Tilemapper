@@ -1,258 +1,262 @@
-#!/usr/bin/env node
 /* src/index.ts
-	Application entrypoint, parses args and runs functions */
+	Main module file, contains API function(s) and exports types */
 
-import minimist from "minimist";
+// Import required types/functions
+import { walkPaths, PathInfo } from "./filewalker";
+import { composite, OutputType, TilemapInfo, ResizeFit, ResizeKernel } from "./compositor";
+import {
+	layoutList, layoutSequences, layoutAnimations,
+	Layout, SequenceLayout, AnimationLayout,
+	LayoutOptions, ListLayoutOptions, SequenceLayoutOptions, AnimationLayoutOptions
+} from "./layouts";
+import { LogHandlerConfig, logger } from "./log";
 
-import { readSequences } from "./sequence";
-import { compositeSequences, CompositeOptions, isValidFit, isValidKernel } from "./composite";
-import { writeMap } from "./output";
+// Export important types
+export {
+	Layout, SequenceLayout, AnimationLayout,
+	LayoutOptions, ListLayoutOptions, SequenceLayoutOptions, AnimationLayoutOptions
+} from "./layouts";
+export { OutputType, ResizeFit, ResizeKernel } from "./compositor";
+export { LogHandlerCallback, LogHandlerConfig } from "./log";
 
-/** Tilemapper options */
-export interface Configuration {
-	/** Output verbose logging messages? (default false) */
-	verbose: boolean;
-
-	/** Input directory (default ".") */
-	inputDir: string;
-	/** Output file (default "tilemap.png") */
-	outputFile: string;
-
-	/** Write a JPEG file instead of PNG? (default false) */
-	useJPEG: boolean;
-
+/** Layout mode to use when generating the tileset/tilemap from all the input images. */
+export enum LayoutMode {
+	/** Generate a tilemap layout in the simplest manner possible, just put all input tiles in a continuous list going from left to right, looping back to the next line once "width" is reached. */
+	ListLayout = "list",
+	/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuous list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
+	SequenceLayout = "sequence",
 	/**
-	 * Sort filenames with numbers correctly
-	 *
-	 * So instead of:
-	 * ```txt
-	 * lurker_death_front_new_1.png
-	 * lurker_death_front_new_10.png
-	 * lurker_death_front_new_11.png
-	 * lurker_death_front_new_12.png
-	 * lurker_death_front_new_13.png
-	 * lurker_death_front_new_14.png
-	 * lurker_death_front_new_15.png
-	 * lurker_death_front_new_16.png
-	 * lurker_death_front_new_17.png
-	 * lurker_death_front_new_18.png
-	 * lurker_death_front_new_19.png
-	 * lurker_death_front_new_2.png
-	 * lurker_death_front_new_20.png
-	 * lurker_death_front_new_3.png
-	 * lurker_death_front_new_4.png
-	 * lurker_death_front_new_5 (still).png
-	 * lurker_death_front_new_6.png
-	 * lurker_death_front_new_7.png
-	 * lurker_death_front_new_8.png
-	 * lurker_death_front_new_9.png
+	 * Advanced. Generate a tilemap layout that contains "animations", where each animation has sub-sequences for different angles.
+	 * This will take a file structure like:
 	 * ```
-	 * You get:
-	 * ```txt
-	 * lurker_death_front_new_1.png
-	 * lurker_death_front_new_2.png
-	 * lurker_death_front_new_3.png
-	 * lurker_death_front_new_4.png
-	 * lurker_death_front_new_5 (still).png
-	 * lurker_death_front_new_6.png
-	 * lurker_death_front_new_7.png
-	 * lurker_death_front_new_8.png
-	 * lurker_death_front_new_9.png
-	 * lurker_death_front_new_10.png
-	 * lurker_death_front_new_11.png
-	 * lurker_death_front_new_12.png
-	 * lurker_death_front_new_13.png
-	 * lurker_death_front_new_14.png
-	 * lurker_death_front_new_15.png
-	 * lurker_death_front_new_16.png
-	 * lurker_death_front_new_17.png
-	 * lurker_death_front_new_18.png
-	 * lurker_death_front_new_19.png
-	 * lurker_death_front_new_20.png
+	 * root/
+	 *   anim1/
+	 *     0/   [frame1.png, frame2.png, frame3.png]
+	 *     90/  [frame1.png, frame2.png, frame3.png]
+	 *     180/ [frame1.png, frame2.png, frame3.png]
+	 *     270/ [frame1.png, frame2.png, frame3.png]
+	 *   anim2/
+	 *     0/   [frame1.png, frame2.png, frame3.png]
+	 *     90/  [frame1.png, frame2.png, frame3.png]
+	 *     180/ [frame1.png, frame2.png, frame3.png]
+	 *     270/ [frame1.png, frame2.png, frame3.png]
+	 * ```
+	 * And output something like:
+	 * ```json
+	 * {
+	 *   "animations": [
+	 *     {
+	 *       "name": "anim1",
+	 *       "angles": [
+	 *         { ... },
+	 *         { ... },
+	 *         { ... },
+	 *         { ... }
+	 *       ]
+	 *     },
+	 *     {
+	 *       "name": "anim2",
+	 *       "angles": [
+	 *         { ... },
+	 *         { ... },
+	 *         { ... },
+	 *         { ... }
+	 *       ]
+	 *     }
+	 *   ]
+	 * }
 	 * ```
 	 */
-	numsort: boolean;
-
-	/** Tile width (default 60) */
-	width: number;
-	/** Tile height (default 60) */
-	height: number;
-	/** Minimum tile count X (default 0) */
-	minCountX: number;
-	/** Minimum tile count Y (default 0) */
-	minCountY: number;
-
-	/** How to fit tiles (default "cover") */
-	fit: CompositeOptions["tileFit"],
-	/** Algorith used when resizing tiles (default "nearest") */
-	kernel: CompositeOptions["tileKernel"]
+	AnimationLayout = "animation"
 }
 
-/** Program binary */
-const binary = "tilemapper";
+/** Tilemapper options. "paths", "layoutMode", and "outputType" are required. All other options are, well, optional! */
+export interface TilemapperOptions<LM> extends Partial<LayoutOptions & ListLayoutOptions & SequenceLayoutOptions & AnimationLayoutOptions> {
+	/**
+	 * Paths to search for images.
+	 * Required.
+	 */
+	paths?: string | string[];
+	/**
+	 * Supported image extensions.
+	 * Default value: `["png", "jpg", "jpeg", "gif", "webp", "tiff", "svg"]`
+	 */
+	extensions?: string[];
+	/**
+	 * Working directory (used when generating dirnames).
+	 * Default value: `process.cwd()`
+	 */
+	workingDirectory?: string;
 
-/** Version message */
-const version = `${binary} v2.2.0`;
+	/**
+	 * Layout mode to use.
+	 * Required.
+	 */
+	layoutMode?: LM;
 
-/** Help message */
-const help =
-`Usage:
-    ${binary} [options] <directory>
+	/**
+	 * Output file data type.
+	 * Required.
+	 */
+	outputType?: OutputType;
+	/**
+	 * Fit mode to use when resizing tiles, if a tile needs to be resized.
+	 * Default value: `ResizeFit.Cover`
+	 */
+	resizeFit?: ResizeFit;
+	/**
+	 * Kernel to use when resizing tiles, if a tile needs to be resized.
+	 * Default value: `ResizeKernel.Nearest`
+	 */
+	resizeKernel?: ResizeKernel;
 
-Options:
-    -h,-?,--help        Print this help message
-    -V,--version        Print version information
+	/**
+	 * Width of each tile in pixels.
+	 * Default value: `128`
+	 */
+	tileWidth?: number;
+	/**
+	 * Height of each tile in pixels.
+	 * Default value: `128`
+	 */
+	tileHeight?: number;
+	/**
+	 * Minimum count of tiles across the X axis.
+	 * Default value: `0`
+	 */
+	minCountX?: number;
+	/**
+	 * Minimum count of tiles across the Y axis.
+	 * Default value: `0`
+	 */
+	minCountY?: number;
 
-    -v,--verbose        Output verbose logging information
+	/**
+	 * Log handler configuration.
+	 * Used to specify callback functions for logging output.
+	 * Default value: `undefined`
+	 */
+	logHandlers?: LogHandlerConfig;
+}
 
-    -o,--output         Output file path (default "tilemap.png")
+/**
+ * Output structure containing data generated by the tilemap() function.
+ * Contains the file data buffer, info about the tilemap, and info about the layout.
+ */
+export interface TilemapperOutput<LT> {
+	/** Output data buffer. */
+	data: Buffer;
+	/** Output tilemap sizing information. */
+	info: TilemapInfo;
+	/** Layout information, contains information on a layout and its contents. */
+	layout: LT;
+}
 
-    -n,--numsort        Sort numbered images correctly
+// Values of various enums, for runtime checks
+const valsOutputType:	string[] = Object.values(OutputType);
+const valsResizeFit:	string[] = Object.values(ResizeFit);
+const valsResizeKernel:	string[] = Object.values(ResizeKernel);
+const valsLayoutMode:	string[] = Object.values(LayoutMode);
 
-    -w,--width          Tile width in pixels (default 60)
-    -h,--height         Tile height in pixels (default 60)
-
-    --minimum-x         Minimum tilemap tile count on the X axis (default 0)
-    --minimum-y         Minimum tilemap tile count on the Y axis (default 0)
-
-    -f,--fit            Tile libvips fit mode
-                            One of: "contain", "cover", "fill", "inside",
-                            "outside"
-    -k,--kernel         Tile libvips kernel format
-                            One of: "nearest", "cubic", "mitchell", "lanczos2",
-                            "lanczos3"
-
-Version:
-    ${version}`;
-
-
-/** Get the message field of an error */
-function errMessage(err: any): string {
-	if (
-		err instanceof Error ||
-		(
-			typeof err === "object" &&
-			"message" in err &&
-			typeof err.message === "string"
-		)
+/** Generate a tilemap from input file/directory paths, outputs a buffer containing image data and various structures containing information about the generated tilemap */
+export async function tilemap<
+	LM extends LayoutMode.ListLayout | LayoutMode.SequenceLayout | LayoutMode.AnimationLayout,
+	LT extends (
+			LM extends LayoutMode.ListLayout	? Layout
+		:	LM extends LayoutMode.SequenceLayout	? SequenceLayout
+		:	LM extends LayoutMode.AnimationLayout	? AnimationLayout
+		:	Layout | SequenceLayout | AnimationLayout
 	)
-		return err.message;
-	else
-		return String(err);
-}
-// Handle program errors
-process.on("uncaughtException", (err: any) => {
-	console.error(errMessage(err));
-	// console.error(err);
-	process.exit(1);
-});
-process.on("unhandledRejection", (err: any, promise: Promise<any>) => {
-	console.error(errMessage(err));
-	// console.error(err);
-	process.exit(1);
-});
+>(
+	/** Tilemapper options. */
+	options?: TilemapperOptions<LM>
+): Promise<TilemapperOutput<LT>> {
+	// Type-check options object and paths + layoutMode
+	if (typeof options !== "object")
+		throw new Error("tilemap: Expected argument \"options\" to be an object");
+	if (!Array.isArray(options.paths) && typeof options.paths !== "string")
+		throw new Error("tilemap: Expected option \"paths\" to be a string or array of strings");
+	if (!valsLayoutMode.includes(options.layoutMode!))
+		throw new Error("tilemap: Expected option \"layoutMode\" to be a valid layout mode");
 
-// Parse program arguments
-const args = minimist(process.argv.slice(2));
+	// Set up log handlers if log handlers were provided
+	let logHandlers: LogHandlerConfig | null = null;
+	if (options.logHandlers) {
+		if (typeof options !== "object")
+			throw new Error("tilemap: Expected option \"logHandlers\" to be an object");
 
-/** Get a string argument */
-function argString(keys: string[], defaultVal: string): string {
-	for (const key of keys) {
-		if (!(key in args)) continue;
+		logHandlers = { ...options.logHandlers };
 
-		let val: any = args[key];
-		if (typeof val === "string") {
-			val = val.trim();
-			if (val) return val;
-		}
+		if (logHandlers.onDebug && typeof logHandlers.onDebug !== "function")
+			throw new Error("tilemap: Expected log handler \"onDebug\" to be a function");
+		if (logHandlers.onInfo && typeof logHandlers.onInfo !== "function")
+			throw new Error("tilemap: Expected log handler \"onInfo\" to be a function");
+		if (logHandlers.onWarn && typeof logHandlers.onWarn !== "function")
+			throw new Error("tilemap: Expected log handler \"onWarn\" to be a function");
+
+		logger.attachHandlers(logHandlers)
 	}
-	return defaultVal;
-}
-/** Get a number argument */
-function argNumber(keys: string[], defaultVal: number): number {
-	for (const key of keys) {
-		if (!(key in args)) continue;
 
-		let val: any = args[key];
-		if (typeof val === "number" && isFinite(val)) return val;
-		if (typeof val === "string") {
-			const num = parseInt(val);
-			if (isFinite(num)) return num;
-		}
+	// Get input OutputType/ResizeFit/ResizeKernel
+	const outputType: OutputType = options.outputType ?? OutputType.PNG;
+	const resizeFit: ResizeFit = options.resizeFit ?? ResizeFit.Cover;
+	const resizeKernel: ResizeKernel = options.resizeKernel ?? ResizeKernel.Nearest;
+	// Type check those too!
+	if (!valsOutputType.includes(outputType))
+		throw new Error("tilemap: Expected option \"outputType\" to be a valid OutputType");
+	if (!valsResizeFit.includes(resizeFit))
+		throw new Error("tilemap: Expected option \"resizeFit\" to be a valid ResizeFit");
+	if (!valsResizeKernel.includes(resizeKernel))
+		throw new Error("tilemap: Expected option \"resizeKernel\" to be a valid ResizeKernel");
+
+	if (options.extensions !== undefined && !Array.isArray(options.extensions))
+		throw new Error("tilemap: Expected option \"extensions\" to be an array of strings");
+	if (options.workingDirectory !== undefined && typeof options.workingDirectory !== "string")
+		throw new Error("tilemap: Expected option \"workingDirectory\" to be a string");
+
+	// Grab extensions and working directory
+	const extensions: string[] | null = options.extensions?.map(String) ?? null;
+	const workingDirectory: string | undefined = options.workingDirectory ?? undefined;
+
+	// Get (and sanitize) paths and layoutMode
+	const paths: string[] = [...(Array.isArray(options.paths) ? options.paths : [options.paths])].map(String);
+	const layoutMode: LM = options.layoutMode!;
+
+	// Walk through paths and generate path info
+	const pathInfos: PathInfo[] = await walkPaths(paths, extensions ?? undefined, workingDirectory);
+	if (pathInfos.length < 1)
+		throw new Error("tilemap: Option \"paths\" matches no files");
+
+	// Use those paths to generate a layout
+	let layout: LT;
+	switch (layoutMode) {
+		case LayoutMode.ListLayout:
+			layout = layoutList(pathInfos, options) as LT;
+			break;
+		case LayoutMode.SequenceLayout:
+			layout = layoutSequences(pathInfos, options) as LT;
+			break;
+		case LayoutMode.AnimationLayout:
+			layout = layoutAnimations(pathInfos, options) as LT;
+			break;
+		default:
+			throw new Error("tilemap: Layout switch fallthrough");
 	}
-	return defaultVal;
+	if (layout.tileset.length < 1 || !layout.tileset[0] || layout.tileset[0].length < 1)
+		throw new Error("tilemap: Generated layout contains no images");
+
+	// Finally, composite that layout together into a tilemap!
+	const [data, info] = await composite(
+		layout.tileset,
+		outputType,
+		options.tileWidth, options.tileHeight,
+		resizeFit, resizeKernel,
+		options.minCountX, options.minCountY
+	);
+
+	// Clean up log handlers if required
+	if (logHandlers) logger.detachHandlers(logHandlers);
+
+	// And return the generated output data
+	return { data, info, layout };
 }
-/** Get a boolean argument */
-function argBoolean(keys: string[], defaultVal: boolean): boolean {
-	for (const key of keys) {
-		if (!(key in args)) continue;
-		const val: any = args[key];
-		if (typeof val === "boolean") return val;
-	}
-	return defaultVal;
-}
-
-// Output help message if requested
-if (argBoolean(["h","?","help"], false)) {
-	console.log(help);
-	process.exit(0);
-}
-// Output version message if requested
-if (argBoolean(["V", "version"], false)) {
-	console.log(version);
-	process.exit(0);
-}
-
-// Get input directory
-const inputDir = ((): string => {
-	if (args._.length > 1)
-		throw new Error("Too many inputs specified");
-	if (args._.length < 1 || !args._[0])
-		throw new Error("Missing required argument 'directory'");
-	return String(args._[0]);
-})();
-// Get output file
-const outputFile = argString(["o", "output"], "tilemap.png");
-
-/** Current configuration */
-export const config: Configuration = {
-	verbose: argBoolean(["v", "verbose"], false),
-	inputDir, outputFile,
-	useJPEG: /\.(jpg|jpeg)$/.test(outputFile),
-	numsort: argBoolean(["n","numsort"], false),
-	width: argNumber(["w", "width"], 60),
-	height: argNumber(["h", "height"], 60),
-	minCountX: argNumber(["minimum-x"], 0),
-	minCountY: argNumber(["minimum-y"], 0),
-	fit: argString(["f", "fit"], "cover") as CompositeOptions["tileFit"],
-	kernel: argString(["k", "kernel"], "nearest") as CompositeOptions["tileKernel"]
-};
-
-// Check fit and kernel params
-if (!isValidFit(config.fit))
-	throw new Error("Invalid fit method '" + config.fit + "'");
-if (!isValidKernel(config.kernel))
-	throw new Error("Invalid kernel format '" + config.kernel + "'");
-
-/** Running in verbose mode? */
-export const verbose: boolean = config.verbose;
-
-// Do this asynchronusly
-(async () => {
-
-	const sequences = await readSequences(config.inputDir);
-
-	const map = await compositeSequences(sequences, {
-		tileWidth: config.width,
-		tileHeight: config.height,
-		minTileCountX: config.minCountX,
-		minTileCountY: config.minCountY,
-		tileFit: config.fit,
-		tileKernel: config.kernel
-	});
-
-	await writeMap(config.outputFile, config.useJPEG, map);
-
-	if (verbose) console.log("Done!");
-
-})();
