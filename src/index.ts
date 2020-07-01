@@ -23,7 +23,7 @@ export { LogHandlerCallback, LogHandlerConfig } from "./log";
 export enum LayoutMode {
 	/** Generate a tilemap layout in the simplest manner possible, just put all input tiles in a continuous list going from left to right, looping back to the next line once "width" is reached. */
 	ListLayout = "list",
-	/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuos list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
+	/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuous list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
 	SequenceLayout = "sequence",
 	/**
 	 * Advanced. Generate a tilemap layout that contains "animations", where each animation has sub-sequences for different angles.
@@ -76,67 +76,67 @@ export interface TilemapperOptions<LM> extends Partial<LayoutOptions & ListLayou
 	 * Paths to search for images.
 	 * Required.
 	 */
-	paths?: string | string[],
+	paths?: string | string[];
 	/**
 	 * Supported image extensions.
 	 * Default value: `["png", "jpg", "jpeg", "gif", "webp", "tiff", "svg"]`
 	 */
-	extensions?: string[],
+	extensions?: string[];
 	/**
 	 * Working directory (used when generating dirnames).
 	 * Default value: `process.cwd()`
 	 */
-	workingDirectory?: string,
+	workingDirectory?: string;
 
 	/**
 	 * Layout mode to use.
 	 * Required.
 	 */
-	layoutMode?: LM,
+	layoutMode?: LM;
 
 	/**
 	 * Output file data type.
 	 * Required.
 	 */
-	outputType?: OutputType,
+	outputType?: OutputType;
 	/**
 	 * Fit mode to use when resizing tiles, if a tile needs to be resized.
 	 * Default value: `ResizeFit.Cover`
 	 */
-	resizeFit?: ResizeFit,
+	resizeFit?: ResizeFit;
 	/**
 	 * Kernel to use when resizing tiles, if a tile needs to be resized.
 	 * Default value: `ResizeKernel.Nearest`
 	 */
-	resizeKernel?: ResizeKernel,
+	resizeKernel?: ResizeKernel;
 
 	/**
 	 * Width of each tile in pixels.
 	 * Default value: `128`
 	 */
-	tileWidth?: number,
+	tileWidth?: number;
 	/**
 	 * Height of each tile in pixels.
 	 * Default value: `128`
 	 */
-	tileHeight?: number,
+	tileHeight?: number;
 	/**
 	 * Minimum count of tiles across the X axis.
 	 * Default value: `0`
 	 */
-	minCountX?: number,
+	minCountX?: number;
 	/**
 	 * Minimum count of tiles across the Y axis.
 	 * Default value: `0`
 	 */
-	minCountY?: number,
+	minCountY?: number;
 
 	/**
 	 * Log handler configuration.
 	 * Used to specify callback functions for logging output.
 	 * Default value: `undefined`
 	 */
-	logHandlers?: LogHandlerConfig
+	logHandlers?: LogHandlerConfig;
 }
 
 /**
@@ -223,7 +223,7 @@ export async function tilemap<
 	const layoutMode: LM = options.layoutMode!;
 
 	// Walk through paths and generate path info
-	const pathInfos: PathInfo[] = await walkPaths(paths, extensions, workingDirectory);
+	const pathInfos: PathInfo[] = await walkPaths(paths, extensions ?? undefined, workingDirectory);
 	if (pathInfos.length < 1)
 		throw new Error("tilemap: Option \"paths\" matches no files");
 

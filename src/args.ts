@@ -55,7 +55,7 @@ export class ArgumentList {
 								value = numberValue;
 							else
 								value = parsedValue;
-						};
+						}
 					}
 					break;
 				case "number":

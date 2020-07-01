@@ -77,7 +77,7 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 	// Create output overlay
 	const overlay = {
 		input: data,
-		top: y * height, left: x * height,
+		top: y * height, left: x * width,
 		gravity: 8
 	} as R
 

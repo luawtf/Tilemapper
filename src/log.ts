@@ -15,13 +15,13 @@ export type LogHandlerCallback = (message: string) => void;
 /** Configuration of multiple LogHandlerCallbacks for different levels. */
 export interface LogHandlerConfig {
 	/** Callback that accepts a message, called when a log message is posted with LogLevel.Debug. */
-	onDebug?: LogHandlerCallback,
+	onDebug?: LogHandlerCallback;
 	/** Callback that accepts a message, called when a log message is posted with LogLevel.Info. */
-	onInfo?: LogHandlerCallback,
+	onInfo?: LogHandlerCallback;
 	/** Callback that accepts a message, called when a log message is posted with LogLevel.Warn. */
-	onWarn?: LogHandlerCallback,
+	onWarn?: LogHandlerCallback;
 	/** Callback that accepts a message, called when a log message is posted with LogLevel.Fatal. */
-	onFatal?: LogHandlerCallback
+	onFatal?: LogHandlerCallback;
 }
 
 /** Tilemapper logging class. */

@@ -76,7 +76,7 @@ export interface AnimationLayoutOptions extends LayoutOptions {
 export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptions): Layout {
 	// Unpack options
 	const longTileNames: boolean = options?.longTileNames ?? false;
-	const width: number = options?.width ?? 64;
+	const width: number = options?.width ?? 16;
 
 	logInfo(`layoutList: Laying out ${inputPathInfos.length} images with width ${width}`);
 
@@ -112,7 +112,7 @@ export function layoutList(inputPathInfos: PathInfo[], options?: ListLayoutOptio
 	return { tileset, tiles };
 }
 
-/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuos list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
+/** Generate a tilemap layout that contains "sequences". Each "sequence" is a continuous list of frames, usually for an animation. Each folder in the inputted paths will be treated as a new sequence. */
 export function layoutSequences(inputPathInfos: PathInfo[], options?: SequenceLayoutOptions): SequenceLayout {
 	const longTileNames: boolean = options?.longTileNames ?? false;
 	const longSequenceNames: boolean = options?.longSequenceNames ?? false;
@@ -227,9 +227,9 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 				[angleDirname: string]: {
 					angle: number;
 					paths: PathInfo[];
-				}
-			}
-		}
+				};
+			};
+		};
 	} = {};
 
 	// Populate animationPaths
