@@ -4,6 +4,7 @@
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
 import { logInfo, logWarn, logPath } from "./log";
+import { dir } from "console";
 
 /** Base layout information, contains information on a layout and its contents. */
 export interface Layout {
@@ -238,7 +239,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		if (!pathInfo) continue;
 
 		const dirnames = [...pathInfo.dirnames];
-		const angleDirname: string | null = dirnames.shift() ?? null;
+		const angleDirname: string | null = dirnames.pop() ?? null;
 		const sequenceDirname: string | null = dirnames.length > 0 ? dirnames.join("/") : null;
 
 		if (!angleDirname || !sequenceDirname) {
@@ -251,7 +252,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		}
 
 		let angle: number | null = Number(angleDirname); angle = angle === angle ? angle : null;
-		let name: string | null = longAnimationNames ? sequenceDirname : (dirnames.shift() ?? null);
+		let name: string | null = longAnimationNames ? sequenceDirname : (dirnames.pop() ?? null);
 
 		if (angle === null || name === null) {
 			logWarn(`Path "${logPath(pathInfo.path)}" ${
