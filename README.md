@@ -56,6 +56,10 @@ Options:
     -W,--width          Width of each tile in pixels. Defaults to 128
     -H,--height         Height of each tile in pixels. Defaults to 128
 
+    -O,--overscan       Overscan to apply to each tile. Negative numbers are
+                        supported. Defaults to 0. Please see online
+                        documentation for more information.
+
     -X,--min-x          Minimum count of tiles across the X axis
     -Y,--min-y          Minimum count of tiles across the Y axis
 
@@ -68,15 +72,16 @@ Options:
 
     -f,--fit            Fit mode to use when resizing tiles, if a tile needs to
                         be resized. Valid values include: "contain", "cover",
-                        "fill", "inside", and "outside". Please see online
-                        documentation for more information
+                        "fill", "inside", and "outside". Defaults to "contain".
+                        Please see online documentation for more information
     -k,--kernel         Kernel mode to use when resizing tiles, if a tile needs
                         to be resized. Valid values include: "nearest", "cubic",
-                        "mitchell", "lancoz2", and "lancoz3". Please see online
-                        documentation for more information
+                        "mitchell", "lancoz2", and "lancoz3". Defaults to
+                        "nearest". Please see online documentation for more
+                        information
 
 Version:
-    tilemapper v3.0.0
+    tilemapper v3.1.0
 ```
 
 ### Options
@@ -140,6 +145,8 @@ And generate a JSON `layout` like:
 Set the width (in pixels) of each tile in the tilemap. This defaults to `128` if not set.
 #### `-H,--height <px>`
 Set the height (in pixels) of each tile in the tilemap. This defaults to `128` if not set.
+#### `-O,--overscan <px>`
+Crop (or add if using negative numbers) this many pixels off of (to) all sides of each tile. Negative numbers should be specified as `-O=-32`. Defaults to `0`.
 #### `-X,--min-x <count>`
 If the tool you are using expects an appropriately sized tilemap, this option can be used to adjust the *minimum* count of tiles on the X axis. If not set, it has no effect, but when set to a value higher that 0 it will force the compositor to generate a tilemap atleast `count` tiles across.
 #### `-Y,--min-y <count>`
@@ -248,6 +255,16 @@ tileHeight?: number;
  * Default value: `0`
  */
 minCountX?: number;
+/**
+ * Overscan (on the X axis) to apply to each tile.
+ * Default value: `0`
+ */
+overscanX?: number;
+/**
+ * Overscan (on the Y axis) to apply to each tile.
+ * Default value: `0`
+ */
+overscanY?: number;
 /**
  * Minimum count of tiles across the Y axis.
  * Default value: `0`

@@ -59,25 +59,49 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 	width: number, height: number,
 	// Position of this tile
 	x: number, y: number,
+	// Overscan on this this tile
+	overX: number, overY: number,
 	// Resize options
 	fit: ResizeFit, kernel: ResizeKernel
 ): Promise<R> {
 	if (filePath === null) return null!;
 
-	// Load and resize image
-	const image: Sharp = sharp(filePath!).resize({
-		width, height,
+	const image: Sharp = sharp(filePath!);
+	image.resize({
+		width: width,
+		height: height,
+
 		fit: fit as keyof FitEnum,
 		kernel: kernel as keyof KernelEnum,
+
 		position: 8
 	});
-	// Generate output image data (as PNG for memory reasons)
+
+	if (overX === 0 && overY === 0) {
+		// Do nothing
+	} else if (overX > 0 && overY > 0) {
+		image.extract({
+			left: overX,
+			top: overY,
+			width: width - overX,
+			height: height - overY
+		});
+	} else {
+		image.extend({
+			left: -overX, right: -overX,
+			top: -overX, bottom: -overX,
+			background: "#FFFFFF00"
+		});
+	}
+
 	const data: Buffer = await image.png().toBuffer();
 
-	// Create output overlay
 	const overlay = {
 		input: data,
-		top: y * height, left: x * width,
+
+		left: x * (width - overX * 2),
+		top: y * (height - overY * 2),
+
 		gravity: 8
 	} as R
 
@@ -95,6 +119,10 @@ export async function composite(
 	width: number = 128,
 	/** Height of each tile. */
 	height: number = 128,
+	/** Overscan (x axis) to apply to each tile. */
+	overX: number = 0,
+	/** Overscan (y axis) to apply to each tile. */
+	overY: number = 0,
 	/** Fit mode for resizing incorrectly sized tiles. */
 	fit: ResizeFit = ResizeFit.Cover,
 	/** Kernel mode for resizing incorrectly sized tiles. */
@@ -129,7 +157,7 @@ export async function composite(
 			if (filePath === null) continue;
 
 			promises.push(
-				generateOverlay(filePath, width, height, x, y, fit, kernel)
+				generateOverlay(filePath, width, height, x, y, overX, overY, fit, kernel)
 					.then((overlay) => void (overlay ? overlays.push(overlay) : null))
 			);
 		}
@@ -138,9 +166,13 @@ export async function composite(
 
 	logInfo(`composite: Generated ${overlays.length} overlays, compositing...`);
 
+	// Calculate actual tile dimensions
+	const tileTotalWidth: number = width - overX * 2;
+	const tileTotalHeight: number = height - overY * 2;
+
 	// Create image
-	const imageWidth: number = width * countX;
-	const imageHeight: number = height * countY;
+	const imageWidth: number = tileTotalWidth * countX;
+	const imageHeight: number = tileTotalHeight * countY;
 	const image: Sharp = sharp({ create: {
 		width: imageWidth,
 		height: imageHeight,
@@ -169,8 +201,8 @@ export async function composite(
 		height: imageHeight,
 		countX,
 		countY,
-		tileWidth: width,
-		tileHeight: height
+		tileWidth: tileTotalWidth,
+		tileHeight: tileTotalHeight
 	};
 
 	return [data, info];

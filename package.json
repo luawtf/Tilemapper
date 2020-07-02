@@ -1,6 +1,6 @@
 {
 	"name": "tilemapper",
-	"version": "3.0.1",
+	"version": "3.1.0",
 	"description": "Generate basic tilemaps from multiple images, or go beyond with automatic animation generation or directional tilemaps.",
 	"main": "dist/index.js",
 	"bin": {

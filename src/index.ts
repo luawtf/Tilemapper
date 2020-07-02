@@ -121,6 +121,16 @@ export interface TilemapperOptions<LM> extends Partial<LayoutOptions & ListLayou
 	 */
 	tileHeight?: number;
 	/**
+	 * Overscan (on the X axis) to apply to each tile.
+	 * Default value: `0`
+	 */
+	overscanX?: number;
+	/**
+	 * Overscan (on the Y axis) to apply to each tile.
+	 * Default value: `0`
+	 */
+	overscanY?: number;
+	/**
 	 * Minimum count of tiles across the X axis.
 	 * Default value: `0`
 	 */
@@ -250,6 +260,7 @@ export async function tilemap<
 		layout.tileset,
 		outputType,
 		options.tileWidth, options.tileHeight,
+		options.overscanX, options.overscanY,
 		resizeFit, resizeKernel,
 		options.minCountX, options.minCountY
 	);

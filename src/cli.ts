@@ -62,6 +62,10 @@ Options:
     -W,--width          Width of each tile in pixels. Defaults to 128
     -H,--height         Height of each tile in pixels. Defaults to 128
 
+    -O,--overscan       Overscan to apply to each tile. Negative numbers are
+                        supported. Defaults to 0. Please see online
+                        documentation for more information.
+
     -X,--min-x          Minimum count of tiles across the X axis
     -Y,--min-y          Minimum count of tiles across the Y axis
 
@@ -177,6 +181,8 @@ const config: {
 	width: number | null;
 	height: number | null;
 
+	overscan: number | null;
+
 	minCountX: number | null;
 	minCountY: number | null;
 
@@ -194,6 +200,7 @@ const config: {
 	outputType:	args.string("t,output-type"),
 	width:		args.number("W,width"),
 	height:		args.number("H,height"),
+	overscan:	args.number("O,overscan"),
 	minCountX:	args.number("X,min-x"),
 	minCountY:	args.number("Y,min-y"),
 	listLength:	args.number("x,l-list-length"),
@@ -223,6 +230,7 @@ interface OutputSettings {
 interface TilemapperSettings {
 	width: number | null;
 	height: number | null;
+	overscan: number | null;
 	minCountX: number | null;
 	minCountY: number | null;
 	listLength: number | null;
@@ -354,10 +362,10 @@ const resizeSettings = ((): ResizeSettings => {
 
 	// Generate a generic configuration for all layout methods
 	const layoutConfig: Partial<LayoutOptions & ListLayoutOptions & SequenceLayoutOptions & AnimationLayoutOptions> = {
-		width: tilemapperSettings.listLength ?? undefined,
-		longTileNames: tilemapperSettings.longNames,
-		longSequenceNames: tilemapperSettings.longNames,
-		longAnimationNames: tilemapperSettings.longNames
+		width:			tilemapperSettings.listLength ?? undefined,
+		longTileNames:		tilemapperSettings.longNames,
+		longSequenceNames:	tilemapperSettings.longNames,
+		longAnimationNames:	tilemapperSettings.longNames
 	};
 
 	// Call the correct layout function
@@ -387,9 +395,10 @@ const resizeSettings = ((): ResizeSettings => {
 	const [data, info] = await composite(
 		layout.tileset,
 		outputSettings.outputType,
-		tilemapperSettings.width ?? undefined,		tilemapperSettings.height ?? undefined,
-		resizeSettings.fit ?? undefined,		resizeSettings.kernel ?? undefined,
-		tilemapperSettings.minCountX ?? undefined,	tilemapperSettings.minCountY ?? undefined
+		tilemapperSettings.width	?? undefined,	tilemapperSettings.height	?? undefined,
+		tilemapperSettings.overscan	?? undefined,	tilemapperSettings.overscan	?? undefined,
+		resizeSettings.fit		?? undefined,	resizeSettings.kernel		?? undefined,
+		tilemapperSettings.minCountX	?? undefined,	tilemapperSettings.minCountY	?? undefined
 	);
 	// Stringify the returned "info" from the compositor
 	const jsonData = JSON.stringify({

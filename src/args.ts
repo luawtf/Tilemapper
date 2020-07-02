@@ -50,7 +50,7 @@ export class ArgumentList {
 						case "NaN":	value = NaN;	break;
 						case "null":	value = null;	break;
 						default: {
-							const numberValue = Number(parsedValue);
+							const numberValue = parseInt(parsedValue, 10);
 							if (numberValue === numberValue)
 								value = numberValue;
 							else
