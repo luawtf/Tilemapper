@@ -4,7 +4,6 @@
 import { PathInfo } from "./filewalker";
 import { SmartSorter } from "./smartsorter";
 import { logInfo, logWarn, logPath } from "./log";
-import { dir } from "console";
 
 /** Base layout information, contains information on a layout and its contents. */
 export interface Layout {
