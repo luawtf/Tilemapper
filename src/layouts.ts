@@ -288,7 +288,7 @@ export function layoutAnimations(inputPathInfos: PathInfo[], options?: Animation
 		};
 		const angles = animation.angles;
 
-		const angleKeys: number[] = Object.keys(animationPath.angles).map(Number).sort();
+		const angleKeys: number[] = Object.keys(animationPath.angles).map(Number).sort((a, b) => a - b);
 		for (let ii = 0; ii < angleKeys.length; ii++) {
 			const angleKey: number = angleKeys[ii];
 			const anglePaths = animationPath.angles[angleKey];
