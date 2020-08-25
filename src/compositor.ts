@@ -51,22 +51,51 @@ export interface TilemapInfo {
 	tileHeight: number;
 }
 
-/** Generate an overlay (OverlayOptions) from a file path. */
-async function generateOverlay<T extends string | null, R extends (T extends string ? OverlayOptions : null)>(
-	// Input file path (or null)
-	filePath: T,
-	// Width/height of each tile
-	width: number, height: number,
-	// Position of this tile
-	x: number, y: number,
-	// Overscan on this this tile
-	overX: number, overY: number,
-	// Resize options
-	fit: ResizeFit, kernel: ResizeKernel
-): Promise<R> {
-	if (filePath === null) return null!;
+/**
+ * Create a Sharp image instance from the data in a file
+ * @param path Path to file
+ * @returns Sharp instance
+ * @function
+ */
+const createSharpFromFile = (path: string): Sharp => sharp(path);
+/**
+ * Create a Sharp image instance from image data in a buffer
+ * @param buffer Image data of any type (PNG, JPG, etc.)
+ * @returns Sharp instance
+ * @function
+ */
+const createSharpFromBuffer = (buffer: Buffer): Sharp => sharp(buffer);
+/**
+ * Create a Sharp image instance that is completely transparent with image dimensions
+ * @param width New image width
+ * @param heigh New image height
+ * @returns Sharp instance
+ * @function
+ */
+const createSharpFromDimensions = (width: number, height: number): Sharp =>
+	sharp({ create: {
+		width, height,
+		channels: 4,
+		background: "#FFFFFF00"
+	} });
 
-	const image: Sharp = sharp(filePath!);
+/** Load an image file at a file path and generate an overlay for it's tile with the correct size information */
+async function generateOverlayFromImageFile(
+	/** Input file path */
+	filePath: string,
+	/** Width/height of each tile */
+	width: number, height: number,
+	/** Position of this tile */
+	x: number, y: number,
+	/** Overscan to apply to this tile */
+	overX: number, overY: number,
+	/** Resize options */
+	fit: ResizeFit, kernel: ResizeKernel
+): Promise<OverlayOptions> {
+	// Create a new Sharp instance with the given file path
+	const image: Sharp = createSharpFromFile(filePath);
+
+	// Apply the resize operation to fit the input image into a tile
 	image.resize({
 		width: width,
 		height: height,
@@ -77,6 +106,7 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 		position: 8
 	});
 
+	// Apply overscan to the tile image
 	if (overX === 0 && overY === 0) {
 		// Do nothing
 	} else if (overX > 0 && overY > 0) {
@@ -94,18 +124,20 @@ async function generateOverlay<T extends string | null, R extends (T extends str
 		});
 	}
 
+	// Generate PNG image data from the tile image
 	const data: Buffer = await image.png().toBuffer();
 
-	const overlay = {
+	// Generate the OverlayOptions instance with the PNG data
+	const overlay: OverlayOptions = {
 		input: data,
 
 		left: x * (width - overX * 2),
 		top: y * (height - overY * 2),
 
 		gravity: 8
-	} as R
+	};
 
-	logDebug(`composite: Generated overlay for "${logPath(filePath)}"`);
+	logDebug(`composite: Generated tile overlay for "${logPath(filePath)}"`);
 	return overlay;
 }
 
@@ -130,58 +162,102 @@ export async function composite(
 	/** Minimum count of tiles on the X axis. */
 	minCountX?: number,
 	/** Minimum count of tiles on the Y axis. */
-	minCountY?: number
+	minCountY?: number,
+	/** Number of tiles per chunk. */
+	chunkTileCount: number = 128
 ): Promise<[Buffer, TilemapInfo]> {
 	// Calculate tile counts
-	let countY: number = Math.floor(Math.max(0, minCountY ?? 0, inputFiles.length));
-	let countX: number = Math.floor(Math.max(0, minCountX ?? 0));
+	let tileCountY: number = Math.floor(Math.max(0, minCountY ?? 0, inputFiles.length));
+	let tileCountX: number = Math.floor(Math.max(0, minCountX ?? 0));
 	for (let y = 0; y < inputFiles.length; y++) {
-		if (inputFiles[y].length > countX) {
-			countX = inputFiles[y].length;
+		if (inputFiles[y].length > tileCountX) {
+			tileCountX = inputFiles[y].length;
 		}
 	}
-
-	logInfo(`composite: Compositing tilemap with ${countX}x${countY} tiles (${countX * width}x${countY * height})`);
-
-	// Computed overlays
-	const overlays: OverlayOptions[] = [];
-
-	// Generate overlays
-	const promises: Promise<void>[] = [];
-	for (let y = 0; y < countY; y++) {
-		const row: (string | null)[] | null = inputFiles[y] ?? null;
-		if (row === null) continue;
-
-		for (let x = 0; x < countX; x++) {
-			const filePath: string | null = row[x] ?? null;
-			if (filePath === null) continue;
-
-			promises.push(
-				generateOverlay(filePath, width, height, x, y, overX, overY, fit, kernel)
-					.then((overlay) => void (overlay ? overlays.push(overlay) : null))
-			);
-		}
-	}
-	await Promise.all(promises);
-
-	logInfo(`composite: Generated ${overlays.length} overlays, compositing...`);
 
 	// Calculate actual tile dimensions
 	const tileTotalWidth: number = width - overX * 2;
 	const tileTotalHeight: number = height - overY * 2;
 
-	// Create image
-	const imageWidth: number = tileTotalWidth * countX;
-	const imageHeight: number = tileTotalHeight * countY;
-	const image: Sharp = sharp({ create: {
-		width: imageWidth,
-		height: imageHeight,
-		channels: 4,
-		background: "#FFFFFF00"
-	} });
+	// Calculate image dimensions
+	const imageWidth: number = tileTotalWidth * tileCountX;
+	const imageHeight: number = tileTotalHeight * tileCountY;
 
-	// Composite overlays into image
-	image.composite(overlays);
+	// Create dimensions debug information string (contains all calculated values)
+	const dimensionsString = `[${tileCountX}x${tileCountY} tiles at ${tileTotalWidth}x${tileTotalHeight} px per tile (${imageWidth}x${imageHeight} total px)]`;
+
+	logInfo(`composite: Compositing tilemap... ${dimensionsString}`);
+
+
+	// Generate tile overlays to composite into the tilemap image
+	const tileOverlayGenerators: Promise<OverlayOptions>[] = [];
+	for (let y = 0; y < tileCountY; y++) {
+		const row: (string | null)[] | null = inputFiles[y] ?? null;
+		if (row === null) continue;
+
+		for (let x = 0; x < tileCountX; x++) {
+			const filePath: string | null = row[x] ?? null;
+			if (filePath === null) continue;
+
+			tileOverlayGenerators.push(
+				generateOverlayFromImageFile(
+					filePath,
+					width, height,
+					x, y,
+					overX, overY,
+					fit, kernel
+				)
+			);
+		}
+	}
+	// Await all those generated/generating tilemap overlays
+	const tileOverlays: OverlayOptions[] = await Promise.all(tileOverlayGenerators);
+
+
+	// Calculate the number of chunk overlays needed for all the tile overlays
+	const chunkOverlayCount: number = Math.ceil(tileOverlays.length / chunkTileCount);
+	logInfo(`composite: Combining ${tileOverlays.length} tile overlays into ${chunkOverlayCount} chunk overlays... ${dimensionsString}`);
+
+	// List of running chunk overlay generation tasks
+	const chunkOverlayGenerators: Promise<OverlayOptions>[] = [];
+
+	// Generate chunk overlays and add each task to chunkOverlayGenerators
+	let chunkOverlaysCompleted: number = 0;
+	for (
+		let i = 0, chunkOverlayNum = 1;
+		i < tileOverlays.length;
+		i += chunkTileCount, chunkOverlayNum++
+	) {
+		// Create array of tile overlays to use for this specific chunk
+		const tileOverlaysChunkSlice: OverlayOptions[] = tileOverlays.slice(i, i + chunkTileCount);
+
+		// Create a new image and composite in the slice of tile overlays
+		const chunkImage: Sharp = createSharpFromDimensions(imageWidth, imageHeight);
+		chunkImage.composite(tileOverlaysChunkSlice);
+
+		// Create a "generator" thing that will return the PNG overlay once completed
+		chunkOverlayGenerators.push(
+			chunkImage
+				.png()
+				.toBuffer()
+				.then((data: Buffer) => {
+					logInfo(`composite: Completed chunk overlay #${chunkOverlayNum} (finished ${++chunkOverlaysCompleted} out of ${chunkOverlayCount})`);
+					return { input: data } as OverlayOptions;
+				})
+		);
+	}
+
+	// Await all those generated/generating chunk overlays
+	const chunkOverlays: OverlayOptions[] = await Promise.all(chunkOverlayGenerators);
+
+	logInfo(`composite: Chunk overlay generation complete, compositing ${chunkOverlayCount} chunk overlays into final tilemap image... ${dimensionsString}`);
+
+
+	// Create a new Sharp image with the tilemap image dimensions
+	const image: Sharp = createSharpFromDimensions(imageWidth, imageHeight);
+
+	// Composite the chunk overlays into the main tilemap image
+	image.composite(chunkOverlays);
 
 	// Set output mode
 	switch (outputType) {
@@ -195,12 +271,15 @@ export async function composite(
 	// Get data buffer
 	const data: Buffer = await image.toBuffer();
 
+	logInfo(`composite: Final image compositing complete, exported image data (${outputType}), generating tilemap info...`);
+
+
 	// Build tilemap info
 	const info: TilemapInfo = {
 		width: imageWidth,
 		height: imageHeight,
-		countX,
-		countY,
+		countX: tileCountX,
+		countY: tileCountY,
 		tileWidth: tileTotalWidth,
 		tileHeight: tileTotalHeight
 	};
